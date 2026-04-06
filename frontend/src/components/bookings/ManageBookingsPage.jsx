@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchIcon, CalendarIcon, ClockIcon, UserIcon } from 'lucide-react'
-import { store } from '../../services/store'
+import { bookingsApi } from '../../services/bookingsApi'
 import { PageHeader } from '../shared/PageHeader'
 import { StatusBadge } from '../shared/StatusBadge'
 import { EmptyState } from '../shared/EmptyState'
@@ -13,14 +13,27 @@ export function ManageBookingsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [decisionModalOpen, setDecisionModalOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
-  const [, setVersion] = useState(0)
+  const [bookings, setBookings] = useState([])
 
-  const filteredBookings = store.bookings.filter((booking) => {
+  const load = useCallback(async () => {
+    try {
+      setBookings(await bookingsApi.list())
+    } catch {
+      setBookings([])
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const filteredBookings = bookings.filter((booking) => {
     const matchesTab = activeTab === 'ALL' || booking.status === activeTab
+    const purpose = (booking.purpose || '').toLowerCase()
     const matchesSearch =
       booking.resourceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.purpose.toLowerCase().includes(searchQuery.toLowerCase())
+      purpose.includes(searchQuery.toLowerCase())
     return matchesTab && matchesSearch
   })
 
@@ -43,19 +56,13 @@ export function ManageBookingsPage() {
     setDecisionModalOpen(true)
   }
 
-  const handleDecision = (decision, reason) => {
-    if (selectedBooking) {
-      const index = store.bookings.findIndex((b) => b.id === selectedBooking.id)
-      if (index !== -1) {
-        store.bookings[index].status = decision
-        if (reason) store.bookings[index].reviewReason = reason
-        store.bookings[index].updatedAt = new Date().toISOString()
-        setVersion((v) => v + 1)
-      }
-    }
+  const handleDecision = async (decision, reason) => {
+    if (!selectedBooking) return
+    await bookingsApi.updateStatus(selectedBooking.id, decision, reason)
+    await load()
   }
 
-  const pendingCount = store.bookings.filter((b) => b.status === 'PENDING').length
+  const pendingCount = bookings.filter((b) => b.status === 'PENDING').length
 
   return (
     <div className="max-w-7xl mx-auto">

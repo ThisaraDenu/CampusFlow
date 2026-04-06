@@ -1,19 +1,47 @@
-import React from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon } from 'lucide-react'
-import { store } from '../../services/store'
+import { bookingsApi } from '../../services/bookingsApi'
 import { StatusBadge } from '../shared/StatusBadge'
 import { ErrorState } from '../shared/ErrorState'
 
 export function BookingDetailsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const booking = store.bookings.find((b) => b.id === id)
+  const [booking, setBooking] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  if (!booking) {
+  const load = useCallback(async () => {
+    if (!id) return
+    setLoading(true)
+    setError('')
+    try {
+      setBooking(await bookingsApi.getById(id))
+    } catch (e) {
+      setError(e?.message || 'Not found')
+      setBooking(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto py-12 text-center text-campus-gray-600">
+        Loading…
+      </div>
+    )
+  }
+
+  if (!booking || error) {
     return (
       <ErrorState
-        message="Booking not found."
+        message={error || 'Booking not found.'}
         onRetry={() => navigate('/bookings')}
       />
     )
@@ -45,11 +73,10 @@ export function BookingDetailsPage() {
         <div className="mt-6">
           <h3 className="font-semibold text-campus-gray-900 mb-2">Purpose</h3>
           <p className="text-campus-gray-700 whitespace-pre-wrap">
-            {booking.purpose}
+            {booking.purpose || '—'}
           </p>
         </div>
       </div>
     </div>
   )
 }
-

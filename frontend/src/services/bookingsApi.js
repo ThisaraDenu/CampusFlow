@@ -1,33 +1,26 @@
-import { store } from './store'
+import { apiRequest } from './apiClient'
 
 export const bookingsApi = {
   async list() {
-    return store.bookings
+    return apiRequest('/api/bookings')
   },
+
   async getById(id) {
-    return store.bookings.find((b) => b.id === id) || null
+    return apiRequest(`/api/bookings/${id}`)
   },
+
   async create(data) {
-    const booking = {
-      ...data,
-      id: `book-${Date.now()}`,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    store.bookings.unshift(booking)
-    return booking
+    return apiRequest('/api/bookings', { method: 'POST', body: data })
   },
+
   async updateStatus(id, status, reviewReason) {
-    const idx = store.bookings.findIndex((b) => b.id === id)
-    if (idx === -1) return null
-    store.bookings[idx].status = status
-    if (reviewReason) store.bookings[idx].reviewReason = reviewReason
-    store.bookings[idx].updatedAt = new Date().toISOString()
-    return store.bookings[idx]
+    return apiRequest(`/api/bookings/${id}/status`, {
+      method: 'PATCH',
+      body: { status, reviewReason: reviewReason || null },
+    })
   },
+
   async cancel(id) {
-    return bookingsApi.updateStatus(id, 'CANCELLED')
+    return apiRequest(`/api/bookings/${id}/cancel`, { method: 'POST' })
   },
 }
-
