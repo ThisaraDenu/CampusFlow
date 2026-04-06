@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { BuildingIcon, CheckCircleIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
@@ -55,6 +55,14 @@ export function LoginPage() {
 
       <div className="flex-1 flex items-center justify-center p-12">
         <div className="w-full max-w-md">
+          <div className="mb-6 text-center">
+            <Link
+              to="/"
+              className="text-sm font-medium text-teal-700 outline-none hover:text-teal-800 focus-visible:rounded focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
+            >
+              ← Back to home
+            </Link>
+          </div>
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-navy-900 mb-2">
               Welcome Back

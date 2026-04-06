@@ -23,6 +23,7 @@ import { AssignedTicketsPage } from './components/tickets/AssignedTicketsPage'
 import { NotificationsPage } from './components/notifications/NotificationsPage'
 import { AdminDashboardPage } from './components/admin/AdminDashboardPage'
 import { ManageUsersPage } from './components/admin/ManageUsersPage'
+import { Home } from './components/Home/Home'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -43,9 +44,11 @@ function AppRoutes() {
       <Route
         path="/"
         element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Home />
         }
       />
+
+      <Route path="/login" element={<LoginPage />} />
 
       <Route
         path="/dashboard"
