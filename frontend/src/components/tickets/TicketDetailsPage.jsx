@@ -1,8 +1,10 @@
-import React, { useState, Fragment } from 'react'
+import React, { useCallback, useEffect, useState, Fragment } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon, CalendarIcon, ClockIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { ticketsApi } from '../../services/ticketsApi'
+import { usersApi } from '../../services/usersApi'
+import { fetchAttachmentBlobUrl } from '../../services/apiClient'
 import { StatusBadge } from '../shared/StatusBadge'
 import { ErrorState } from '../shared/ErrorState'
 import { TicketAttachmentGallery } from './TicketAttachmentGallery'
@@ -13,16 +15,92 @@ export function TicketDetailsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [ticket, setTicket] = useState(null)
+  const [technicians, setTechnicians] = useState([])
+  const [attachmentUrls, setAttachmentUrls] = useState([])
+  const [loadError, setLoadError] = useState('')
+  const [loading, setLoading] = useState(true)
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
-  const [, setRevision] = useState(0)
 
-  const ticket = store.tickets.find((t) => t.id === id)
+  const loadTicket = useCallback(async () => {
+    if (!id) return
+    setLoading(true)
+    setLoadError('')
+    try {
+      const t = await ticketsApi.getById(id)
+      setTicket(t)
+    } catch (e) {
+      setLoadError(e?.message || 'Failed to load ticket')
+      setTicket(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
 
-  if (!ticket) {
+  useEffect(() => {
+    loadTicket()
+  }, [loadTicket])
+
+  useEffect(() => {
+    let cancelled = false
+    const urls = []
+    ;(async () => {
+      if (!ticket?.attachments?.length) {
+        if (!cancelled) setAttachmentUrls([])
+        return
+      }
+      const next = []
+      for (const att of ticket.attachments) {
+        if (cancelled) break
+        if (att.mimeType?.startsWith('image/')) {
+          try {
+            const u = await fetchAttachmentBlobUrl(att.id)
+            next.push(u)
+            urls.push(u)
+          } catch {
+            /* skip broken image */
+          }
+        }
+      }
+      if (!cancelled) setAttachmentUrls(next)
+    })()
+    return () => {
+      cancelled = true
+      urls.forEach((u) => URL.revokeObjectURL(u))
+    }
+  }, [ticket?.id, ticket?.attachments])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const techs = await usersApi.listTechnicians()
+        if (!cancelled) setTechnicians(techs)
+      } catch {
+        if (!cancelled) setTechnicians([])
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto py-12 text-center text-campus-gray-600">
+        Loading ticket…
+      </div>
+    )
+  }
+
+  if (!ticket || loadError) {
     return (
       <ErrorState
         title="Ticket Not Found"
-        message="The ticket you're looking for doesn't exist or has been removed."
+        message={
+          loadError ||
+          "The ticket you're looking for doesn't exist or has been removed."
+        }
         onRetry={() => navigate('/tickets')}
       />
     )
@@ -57,20 +135,14 @@ export function TicketDetailsPage() {
       minute: '2-digit',
     })
 
-  const handleUpdateStatus = (newStatus, resolutionNotes, assignedTo) => {
-    const idx = store.tickets.findIndex((t) => t.id === ticket.id)
-    if (idx === -1) return
-    store.tickets[idx].status = newStatus
-    if (resolutionNotes) store.tickets[idx].resolutionNotes = resolutionNotes
+  const handleUpdateStatus = async (newStatus, resolutionNotes, assignedTo) => {
+    const body = { status: newStatus }
+    if (resolutionNotes) body.resolutionNotes = resolutionNotes
     if (assignedTo !== undefined) {
-      store.tickets[idx].assignedTo = assignedTo || undefined
-      const tech = assignedTo
-        ? store.users.find((u) => u.id === assignedTo)
-        : null
-      store.tickets[idx].assignedToName = tech ? tech.name : undefined
+      body.assignedTo = assignedTo || null
     }
-    store.tickets[idx].updatedAt = new Date().toISOString()
-    setRevision((r) => r + 1)
+    await ticketsApi.update(ticket.id, body)
+    await loadTicket()
   }
 
   const statusSteps = [
@@ -79,7 +151,10 @@ export function TicketDetailsPage() {
     { status: 'RESOLVED', label: 'Resolved' },
     { status: 'CLOSED', label: 'Closed' },
   ]
-  const currentStepIndex = statusSteps.findIndex((s) => s.status === ticket.status)
+  const currentStepIndex =
+    ticket.status === 'REJECTED'
+      ? -1
+      : statusSteps.findIndex((s) => s.status === ticket.status)
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -118,6 +193,12 @@ export function TicketDetailsPage() {
           )}
         </div>
 
+        {ticket.status === 'REJECTED' && (
+          <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4">
+            This ticket was rejected.
+          </p>
+        )}
+
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           <div>
             <h3 className="text-sm font-medium text-campus-gray-500 mb-1">
@@ -132,7 +213,7 @@ export function TicketDetailsPage() {
               Category
             </h3>
             <p className="text-campus-gray-900">
-              {ticket.category.replace(/_/g, ' ')}
+              {String(ticket.category || '').replace(/_/g, ' ')}
             </p>
           </div>
           <div>
@@ -175,7 +256,7 @@ export function TicketDetailsPage() {
                 <div className="flex flex-col items-center">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                      index <= currentStepIndex
+                      currentStepIndex >= 0 && index <= currentStepIndex
                         ? 'bg-teal-600 text-white'
                         : 'bg-campus-gray-200 text-campus-gray-500'
                     }`}
@@ -189,7 +270,9 @@ export function TicketDetailsPage() {
                 {index < statusSteps.length - 1 && (
                   <div
                     className={`flex-1 h-1 ${
-                      index < currentStepIndex ? 'bg-teal-600' : 'bg-campus-gray-200'
+                      currentStepIndex >= 0 && index < currentStepIndex
+                        ? 'bg-teal-600'
+                        : 'bg-campus-gray-200'
                     }`}
                   />
                 )}
@@ -220,7 +303,7 @@ export function TicketDetailsPage() {
           <h3 className="text-lg font-semibold text-campus-gray-900 mb-4">
             Attachments
           </h3>
-          <TicketAttachmentGallery attachments={ticket.attachments} />
+          <TicketAttachmentGallery attachments={attachmentUrls} />
         </div>
 
         <div className="border-t border-campus-gray-200 pt-6">
@@ -233,8 +316,8 @@ export function TicketDetailsPage() {
         onClose={() => setUpdateModalOpen(false)}
         ticket={ticket}
         onUpdate={handleUpdateStatus}
+        technicians={technicians}
       />
     </div>
   )
 }
-
