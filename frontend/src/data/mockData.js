@@ -2,7 +2,7 @@ export const mockUsers = [
   {
     id: 'user-1',
     name: 'Sarah Johnson',
-    email: 'sarah.johnson@university.edu',
+    email: 'you@gmail.com',
     role: 'USER',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
     createdAt: '2024-01-15T08:00:00Z',

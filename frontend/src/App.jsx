@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppLayout } from './components/layout/AppLayout'
 
 import { LoginPage } from './components/auth/LoginPage'
+import { SignUpPage } from './components/auth/SignUpPage'
 import { DashboardPage } from './components/dashboard/DashboardPage'
 import { ProfilePage } from './components/profile/ProfilePage'
 import { UnauthorizedPage } from './components/misc/UnauthorizedPage'
@@ -49,6 +50,8 @@ function AppRoutes() {
       />
 
       <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/signup" element={<SignUpPage />} />
 
       <Route
         path="/dashboard"

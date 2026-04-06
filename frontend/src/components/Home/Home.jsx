@@ -155,12 +155,12 @@ export function Home() {
                 </div>
                 <div>
                   <p className="text-lg font-bold text-white drop-shadow-sm">
-                    CampusOps Hub
+                    CampusFlow
                   </p>
                   <p className="text-xs text-teal-300">Smart Campus Operations</p>
                 </div>
               </a>
-              <nav className="flex items-center gap-3">
+              <nav className="flex items-center gap-2 sm:gap-3">
                 <a
                   href="#features"
                   className="hidden rounded-lg px-3 py-2 text-sm font-medium text-white/90 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900 sm:inline-block"
@@ -169,8 +169,15 @@ export function Home() {
                 </a>
                 <button
                   type="button"
+                  onClick={() => navigate('/signup')}
+                  className="rounded-lg border border-white/40 bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm outline-none transition-colors hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900 sm:px-4"
+                >
+                  Sign up
+                </button>
+                <button
+                  type="button"
                   onClick={() => navigate('/login')}
-                  className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-md outline-none transition-colors hover:bg-teal-500 focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
+                  className="rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-md outline-none transition-colors hover:bg-teal-500 focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900 sm:px-4"
                 >
                   Sign in
                 </button>
@@ -358,7 +365,7 @@ export function Home() {
 
       <footer className="border-t border-campus-gray-200 bg-white py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-center text-sm text-campus-gray-500 sm:flex-row sm:text-left sm:px-6">
-          <p>© {new Date().getFullYear()} CampusOps Hub. Demo purposes only.</p>
+          <p>© {new Date().getFullYear()} CampusFlow. Demo purposes only.</p>
           <a
             href="#features"
             className="font-medium text-teal-700 outline-none hover:text-teal-800 focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 rounded"

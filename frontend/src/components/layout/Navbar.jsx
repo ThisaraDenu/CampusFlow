@@ -39,7 +39,7 @@ export function Navbar() {
     if (path === '/admin/tickets') return 'Manage Tickets'
     if (path === '/admin/users') return 'Manage Users'
     if (path === '/technician/tickets') return 'Assigned Tickets'
-    return 'CampusOps Hub'
+    return 'CampusFlow'
   }
 
   const unreadCount = store.notifications.filter(
