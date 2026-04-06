@@ -3,7 +3,13 @@ import { authApi } from '../services/authApi'
 
 const AuthContext = createContext(undefined)
 
-const STORAGE_KEY = 'campusops_user'
+const STORAGE_KEY = 'campusflow_user'
+
+function userForClient(u) {
+  if (!u) return u
+  const { demoPassword: _removed, ...safe } = u
+  return safe
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -15,11 +21,20 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = !!user
 
-  const login = async (role) => {
-    const u = await authApi.login(role)
-    setUser(u)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(u))
-    return u
+  const login = async (email, password) => {
+    const u = await authApi.login(email, password)
+    const safe = userForClient(u)
+    setUser(safe)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+    return safe
+  }
+
+  const register = async (payload) => {
+    const u = await authApi.register(payload)
+    const safe = userForClient(u)
+    setUser(safe)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+    return safe
   }
 
   const logout = async () => {
@@ -36,7 +51,7 @@ export function AuthProvider({ children }) {
   }
 
   const value = useMemo(
-    () => ({ user, isAuthenticated, login, logout, switchRole }),
+    () => ({ user, isAuthenticated, login, register, logout, switchRole }),
     [user, isAuthenticated],
   )
 
