@@ -1,58 +1,123 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { authApi } from '../services/authApi'
+import { getToken, setToken } from '../services/apiClient'
 
 const AuthContext = createContext(undefined)
 
-const STORAGE_KEY = 'campusflow_user'
-
 function userForClient(u) {
   if (!u) return u
-  const { demoPassword: _removed, ...safe } = u
-  return safe
+  return {
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    avatar: u.avatar,
+    createdAt: u.createdAt,
+  }
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [bootstrapping, setBootstrapping] = useState(true)
 
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) setUser(JSON.parse(saved))
+  const refreshUser = useCallback(async () => {
+    const t = getToken()
+    if (!t) {
+      setUser(null)
+      return null
+    }
+    const u = await authApi.me()
+    const safe = userForClient(u)
+    setUser(safe)
+    return safe
   }, [])
 
-  const isAuthenticated = !!user
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        if (!getToken()) {
+          return
+        }
+        const u = await authApi.me()
+        if (!cancelled) {
+          setUser(userForClient(u))
+        }
+      } catch {
+        if (!cancelled) {
+          setToken(null)
+          setUser(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setBootstrapping(false)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-  const login = async (email, password) => {
-    const u = await authApi.login(email, password)
-    const safe = userForClient(u)
+  const isAuthenticated = !!user && !!getToken()
+
+  const login = useCallback(async (email, password) => {
+    const data = await authApi.login(email, password)
+    const safe = userForClient(data.user)
     setUser(safe)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
     return safe
-  }
+  }, [])
 
-  const register = async (payload) => {
-    const u = await authApi.register(payload)
-    const safe = userForClient(u)
+  const register = useCallback(async (payload) => {
+    const data = await authApi.register(payload)
+    const safe = userForClient(data.user)
     setUser(safe)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
     return safe
-  }
+  }, [])
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await authApi.logout()
     setUser(null)
-    localStorage.removeItem(STORAGE_KEY)
-  }
+  }, [])
 
-  const switchRole = async (role) => {
-    const u = await authApi.switchRole(role)
-    setUser(u)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(u))
-    return u
-  }
+  const switchRole = useCallback(async (role) => {
+    const data = await authApi.switchRole(role)
+    const safe = userForClient(data.user)
+    setUser(safe)
+    return safe
+  }, [])
+
+  const completeOAuthSession = useCallback(
+    async (token) => {
+      authApi.persistTokenFromOAuth(token)
+      return refreshUser()
+    },
+    [refreshUser],
+  )
 
   const value = useMemo(
-    () => ({ user, isAuthenticated, login, register, logout, switchRole }),
-    [user, isAuthenticated],
+    () => ({
+      user,
+      isAuthenticated,
+      bootstrapping,
+      login,
+      register,
+      logout,
+      switchRole,
+      completeOAuthSession,
+      refreshUser,
+    }),
+    [
+      user,
+      isAuthenticated,
+      bootstrapping,
+      login,
+      register,
+      logout,
+      switchRole,
+      completeOAuthSession,
+      refreshUser,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -63,4 +128,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider')
   return ctx
 }
-
