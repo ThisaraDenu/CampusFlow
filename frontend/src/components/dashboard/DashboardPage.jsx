@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BuildingIcon,
@@ -9,16 +9,49 @@ import {
   ArrowRightIcon,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { resourcesApi } from '../../services/resourcesApi'
+import { bookingsApi } from '../../services/bookingsApi'
+import { ticketsApi } from '../../services/ticketsApi'
+import { notificationsApi } from '../../services/notificationsApi'
 import { StatusBadge } from '../shared/StatusBadge'
 
 export function DashboardPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [resources, setResources] = useState([])
+  const [bookings, setBookings] = useState([])
+  const [tickets, setTickets] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const userBookings = store.bookings.filter((b) => b.userId === user?.id)
-  const userTickets = store.tickets.filter((t) => t.userId === user?.id)
-  const userNotifications = store.notifications.filter((n) => n.userId === user?.id)
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [resList, bookList, ticketList, notifList] = await Promise.all([
+        resourcesApi.list(),
+        bookingsApi.list(),
+        ticketsApi.list('my'),
+        notificationsApi.list(),
+      ])
+      setResources(resList)
+      setBookings(bookList.filter((b) => b.userId === user?.id))
+      setTickets(ticketList)
+      setNotifications(notifList)
+    } catch {
+      setResources([])
+      setBookings([])
+      setTickets([])
+      setNotifications([])
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const userNotifications = notifications
   const unreadNotifications = userNotifications.filter((n) => !n.isRead)
 
   const quickActions = [
@@ -42,21 +75,21 @@ export function DashboardPage() {
   const stats = [
     {
       label: 'Total Resources',
-      value: store.resources.length,
+      value: resources.length,
       icon: BuildingIcon,
       color: 'bg-blue-100 text-blue-600',
       action: () => navigate('/resources'),
     },
     {
       label: 'My Bookings',
-      value: userBookings.length,
+      value: bookings.length,
       icon: CalendarIcon,
       color: 'bg-teal-100 text-teal-600',
       action: () => navigate('/bookings'),
     },
     {
       label: 'My Tickets',
-      value: userTickets.length,
+      value: tickets.length,
       icon: TicketIcon,
       color: 'bg-amber-100 text-amber-600',
       action: () => navigate('/tickets'),
@@ -69,6 +102,15 @@ export function DashboardPage() {
       action: () => navigate('/notifications'),
     },
   ]
+
+  const userBookings = bookings
+  const userTickets = tickets
+
+  if (loading) {
+    return (
+      <div className="py-12 text-center text-campus-gray-600">Loading dashboard…</div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -146,6 +188,12 @@ export function DashboardPage() {
                 key={booking.id}
                 className="p-4 border border-campus-gray-200 rounded-lg hover:border-teal-600 transition-colors cursor-pointer"
                 onClick={() => navigate(`/bookings/${booking.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ')
+                    navigate(`/bookings/${booking.id}`)
+                }}
               >
                 <div className="flex items-start justify-between mb-2">
                   <p className="font-medium text-campus-gray-900">
@@ -187,6 +235,12 @@ export function DashboardPage() {
                 key={ticket.id}
                 className="p-4 border border-campus-gray-200 rounded-lg hover:border-teal-600 transition-colors cursor-pointer"
                 onClick={() => navigate(`/tickets/${ticket.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ')
+                    navigate(`/tickets/${ticket.id}`)
+                }}
               >
                 <div className="flex items-start justify-between mb-2">
                   <p className="font-medium text-campus-gray-900">
@@ -260,4 +314,3 @@ export function DashboardPage() {
     </div>
   )
 }
-

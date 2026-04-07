@@ -15,7 +15,10 @@ export function ProfilePage() {
         <div className="px-8 pb-8">
           <div className="flex items-end gap-6 -mt-16 mb-6">
             <img
-              src={user?.avatar}
+              src={
+                user?.avatar ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.name || 'user')}`
+              }
               alt={user?.name}
               className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
             />
