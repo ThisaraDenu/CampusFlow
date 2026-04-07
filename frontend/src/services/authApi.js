@@ -1,20 +1,70 @@
-import { store } from './store'
+import { apiRequest, setToken } from './apiClient'
 
-const pickUserByRole = (role) => store.users.find((u) => u.role === role) || null
-
-export const authApi = {
-  async login(role) {
-    const u = pickUserByRole(role)
-    if (!u) throw new Error('No demo user found for role')
-    return u
-  },
-  async logout() {
-    return true
-  },
-  async switchRole(role) {
-    const u = pickUserByRole(role)
-    if (!u) throw new Error('No demo user found for role')
-    return u
-  },
+/**
+ * Ask the backend for the exact Google OAuth URL for this server (avoids wrong host/port,
+ * e.g. hitting standalone Tomcat or the React dev server by mistake).
+ */
+export async function fetchGoogleOAuthRedirectUrl() {
+  const data = await apiRequest('/api/auth/google-authorization-url', {
+    method: 'GET',
+    skipAuth: true,
+  })
+  if (!data?.url || typeof data.url !== 'string') {
+    throw new Error('Invalid response when starting Google sign-in')
+  }
+  return data.url
 }
 
+export const authApi = {
+  async login(email, password) {
+    const data = await apiRequest('/api/auth/login', {
+      method: 'POST',
+      body: { email, password },
+      skipAuth: true,
+    })
+    if (data?.token) {
+      setToken(data.token)
+    }
+    return data
+  },
+
+  async register({ name, email, password }) {
+    const data = await apiRequest('/api/auth/register', {
+      method: 'POST',
+      body: { name, email, password },
+      skipAuth: true,
+    })
+    if (data?.token) {
+      setToken(data.token)
+    }
+    return data
+  },
+
+  async me() {
+    return apiRequest('/api/auth/me')
+  },
+
+  async logout() {
+    setToken(null)
+    return true
+  },
+
+  async switchRole(role) {
+    const data = await apiRequest('/api/auth/switch-role', {
+      method: 'POST',
+      body: { role: String(role).toUpperCase() },
+    })
+    if (data?.token) {
+      setToken(data.token)
+    }
+    return data
+  },
+
+  /** Apply token from OAuth hash and return whether a token was present */
+  persistTokenFromOAuth(token) {
+    if (!token) return false
+    setToken(token)
+    return true
+  },
+
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   SearchIcon,
@@ -8,7 +8,7 @@ import {
   LogOutIcon,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { notificationsApi } from '../../services/notificationsApi'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export function Navbar() {
@@ -17,6 +17,27 @@ export function Navbar() {
   const { user, logout, switchRole } = useAuth()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showRoleMenu, setShowRoleMenu] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!user?.id) {
+      setUnreadCount(0)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await notificationsApi.list()
+        const n = list.filter((x) => x.userId === user?.id && !x.isRead).length
+        if (!cancelled) setUnreadCount(n)
+      } catch {
+        if (!cancelled) setUnreadCount(0)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, location.pathname])
 
   const getPageTitle = () => {
     const path = location.pathname
@@ -39,12 +60,8 @@ export function Navbar() {
     if (path === '/admin/tickets') return 'Manage Tickets'
     if (path === '/admin/users') return 'Manage Users'
     if (path === '/technician/tickets') return 'Assigned Tickets'
-    return 'CampusOps Hub'
+    return 'CampusFlow'
   }
-
-  const unreadCount = store.notifications.filter(
-    (n) => !n.isRead && n.userId === user?.id,
-  ).length
 
   const handleRoleSwitch = async (role) => {
     await switchRole(role)
@@ -83,7 +100,10 @@ export function Navbar() {
             className="flex items-center gap-2 p-2 hover:bg-campus-gray-50 rounded-lg transition-colors"
           >
             <img
-              src={user?.avatar}
+              src={
+                user?.avatar ||
+                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.name || 'user')}`
+              }
               alt={user?.name}
               className="w-8 h-8 rounded-full"
             />
