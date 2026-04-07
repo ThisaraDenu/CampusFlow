@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BellIcon, TrashIcon, CheckIcon } from 'lucide-react'
+import { BellIcon, CheckIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { notificationsApi } from '../../services/notificationsApi'
 import { PageHeader } from '../shared/PageHeader'
 import { EmptyState } from '../shared/EmptyState'
 
@@ -10,9 +10,24 @@ export function NotificationsPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('ALL')
-  const [notifications, setNotifications] = useState(
-    store.notifications.filter((n) => n.userId === user?.id),
-  )
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const list = await notificationsApi.list()
+      setNotifications(list.filter((n) => n.userId === user?.id))
+    } catch {
+      setNotifications([])
+    } finally {
+      setLoading(false)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const filtered = notifications.filter((n) => {
     if (activeTab === 'UNREAD') return !n.isRead
@@ -22,23 +37,28 @@ export function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
-  const markAsRead = (id) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
-    )
+  const markAsRead = async (id) => {
+    try {
+      await notificationsApi.markRead(id)
+      await load()
+    } catch {
+      /* ignore */
+    }
   }
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })))
+  const markAllAsRead = async () => {
+    try {
+      await notificationsApi.markAllRead()
+      await load()
+    } catch {
+      /* ignore */
+    }
   }
 
-  const deleteNotification = (id, e) => {
-    e.stopPropagation()
-    setNotifications(notifications.filter((n) => n.id !== id))
-  }
-
-  const handleClick = (n) => {
-    markAsRead(n.id)
+  const handleClick = async (n) => {
+    if (!n.isRead) {
+      await markAsRead(n.id)
+    }
     if (n.relatedId && n.type.startsWith('BOOKING_')) navigate(`/bookings/${n.relatedId}`)
     if (n.relatedId && n.type.startsWith('TICKET_')) navigate(`/tickets/${n.relatedId}`)
   }
@@ -78,7 +98,9 @@ export function NotificationsPage() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <p className="text-center text-campus-gray-500 py-12">Loading…</p>
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={BellIcon}
           title="No notifications"
@@ -120,13 +142,6 @@ export function NotificationsPage() {
                       <CheckIcon className="w-4 h-4" />
                     </button>
                   )}
-                  <button
-                    onClick={(e) => deleteNotification(n.id, e)}
-                    className="p-1 text-campus-gray-400 hover:text-red-600 transition-colors"
-                    title="Delete"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             </div>
@@ -136,4 +151,3 @@ export function NotificationsPage() {
     </div>
   )
 }
-
