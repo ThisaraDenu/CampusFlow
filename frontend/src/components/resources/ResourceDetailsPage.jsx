@@ -1,8 +1,8 @@
-import React from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon, BuildingIcon, CalendarIcon, EditIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { resourcesApi } from '../../services/resourcesApi'
 import { StatusBadge } from '../shared/StatusBadge'
 import { ErrorState } from '../shared/ErrorState'
 
@@ -11,12 +11,40 @@ export function ResourceDetailsPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
+  const [resource, setResource] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const resource = store.resources.find((r) => r.id === id)
-  if (!resource) {
+  const load = useCallback(async () => {
+    if (!id) return
+    setLoading(true)
+    setError('')
+    try {
+      setResource(await resourcesApi.getById(id))
+    } catch (e) {
+      setError(e?.message || 'Not found')
+      setResource(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto py-12 text-center text-campus-gray-600">
+        Loading…
+      </div>
+    )
+  }
+
+  if (!resource || error) {
     return (
       <ErrorState
-        message="Resource not found."
+        message={error || 'Resource not found.'}
         onRetry={() => navigate('/resources')}
       />
     )
@@ -87,7 +115,7 @@ export function ResourceDetailsPage() {
               About this Resource
             </h2>
             <p className="text-campus-gray-700 leading-relaxed whitespace-pre-line">
-              {resource.description}
+              {resource.description || 'No description provided.'}
             </p>
           </div>
         </div>
@@ -95,4 +123,3 @@ export function ResourceDetailsPage() {
     </div>
   )
 }
-
