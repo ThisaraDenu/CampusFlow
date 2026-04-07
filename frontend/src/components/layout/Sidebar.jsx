@@ -31,8 +31,8 @@ export function Sidebar() {
             <BuildingIcon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-navy-900">CampusOps</h1>
-            <p className="text-xs text-campus-gray-600">Hub</p>
+            <h1 className="font-bold text-lg text-navy-900">CampusFlow</h1>
+            <p className="text-xs text-campus-gray-600">Smart campus operations</p>
           </div>
         </div>
       </div>

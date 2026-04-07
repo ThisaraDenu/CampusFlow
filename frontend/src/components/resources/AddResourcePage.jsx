@@ -1,20 +1,41 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon } from 'lucide-react'
+import { resourcesApi } from '../../services/resourcesApi'
 import { PageHeader } from '../shared/PageHeader'
 import { ResourceForm } from './ResourceForm'
-import { store } from '../../services/store'
 
 export function AddResourcePage() {
   const navigate = useNavigate()
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (data) => {
-    store.resources.unshift({
-      ...data,
-      id: `res-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    })
-    navigate('/resources')
+  const handleSubmit = async (data) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      await resourcesApi.create({
+        name: data.name,
+        type: data.type,
+        capacity: data.capacity,
+        location: data.location,
+        availabilityStart:
+          data.availabilityStart.length === 5
+            ? `${data.availabilityStart}:00`
+            : data.availabilityStart,
+        availabilityEnd:
+          data.availabilityEnd.length === 5
+            ? `${data.availabilityEnd}:00`
+            : data.availabilityEnd,
+        status: data.status,
+        description: data.description || null,
+        imageUrl: data.imageUrl || null,
+      })
+      navigate('/resources')
+    } catch (e) {
+      alert(e?.message || 'Could not create resource')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -36,4 +57,3 @@ export function AddResourcePage() {
     </div>
   )
 }
-
