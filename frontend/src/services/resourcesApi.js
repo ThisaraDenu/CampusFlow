@@ -1,28 +1,23 @@
-import { store } from './store'
+import { apiRequest } from './apiClient'
 
 export const resourcesApi = {
   async list() {
-    return store.resources
+    return apiRequest('/api/resources')
   },
+
   async getById(id) {
-    return store.resources.find((r) => r.id === id) || null
+    return apiRequest(`/api/resources/${id}`)
   },
+
   async create(data) {
-    const newResource = { ...data, id: `res-${Date.now()}`, createdAt: new Date().toISOString() }
-    store.resources.unshift(newResource)
-    return newResource
+    return apiRequest('/api/resources', { method: 'POST', body: data })
   },
+
   async update(id, data) {
-    const idx = store.resources.findIndex((r) => r.id === id)
-    if (idx === -1) return null
-    store.resources[idx] = { ...store.resources[idx], ...data }
-    return store.resources[idx]
+    return apiRequest(`/api/resources/${id}`, { method: 'PUT', body: data })
   },
+
   async remove(id) {
-    const idx = store.resources.findIndex((r) => r.id === id)
-    if (idx === -1) return false
-    store.resources.splice(idx, 1)
-    return true
+    return apiRequest(`/api/resources/${id}`, { method: 'DELETE' })
   },
 }
-

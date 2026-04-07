@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PlusIcon, SearchIcon, BuildingIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { resourcesApi } from '../../services/resourcesApi'
 import { PageHeader } from '../shared/PageHeader'
 import { StatusBadge } from '../shared/StatusBadge'
 import { EmptyState } from '../shared/EmptyState'
@@ -11,10 +11,26 @@ export function ResourcesPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
-
   const [query, setQuery] = useState('')
+  const [resources, setResources] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const resources = store.resources.filter((r) => {
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setResources(await resourcesApi.list())
+    } catch {
+      setResources([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const filtered = resources.filter((r) => {
     if (!query.trim()) return true
     const q = query.toLowerCase()
     return r.name.toLowerCase().includes(q) || r.location.toLowerCase().includes(q)
@@ -48,7 +64,9 @@ export function ResourcesPage() {
         </div>
       </div>
 
-      {resources.length === 0 ? (
+      {loading ? (
+        <p className="text-center text-campus-gray-500 py-12">Loading resources…</p>
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={BuildingIcon}
           title="No resources found"
@@ -56,10 +74,16 @@ export function ResourcesPage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {resources.map((resource) => (
+          {filtered.map((resource) => (
             <div
               key={resource.id}
               onClick={() => navigate(`/resources/${resource.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ')
+                  navigate(`/resources/${resource.id}`)
+              }}
               className="bg-white rounded-xl shadow-sm border border-campus-gray-200 overflow-hidden hover:border-teal-500 transition-colors cursor-pointer"
             >
               <div className="h-40 bg-campus-gray-100 relative">
@@ -96,4 +120,3 @@ export function ResourcesPage() {
     </div>
   )
 }
-
