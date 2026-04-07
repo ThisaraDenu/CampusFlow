@@ -1,19 +1,33 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { SearchIcon, UserIcon } from 'lucide-react'
-import { store } from '../../services/store'
+import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
 import { EmptyState } from '../shared/EmptyState'
 
 export function ManageUsersPage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const [, setVersion] = useState(0)
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const users = store.users
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setUsers(await usersApi.list())
+    } catch {
+      setUsers([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()),
+    (u) =>
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   const getRoleBadgeColor = (role) => {
@@ -35,11 +49,12 @@ export function ManageUsersPage() {
       year: 'numeric',
     })
 
-  const handleRoleChange = (userId, newRole) => {
-    const idx = store.users.findIndex((u) => u.id === userId)
-    if (idx !== -1) {
-      store.users[idx] = { ...store.users[idx], role: newRole }
-      setVersion((v) => v + 1)
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      await usersApi.updateRole(userId, newRole)
+      await load()
+    } catch (e) {
+      alert(e?.message || 'Could not update role')
     }
   }
 
@@ -63,7 +78,9 @@ export function ManageUsersPage() {
         </div>
       </div>
 
-      {filteredUsers.length === 0 ? (
+      {loading ? (
+        <p className="text-center text-campus-gray-500 py-12">Loading users…</p>
+      ) : filteredUsers.length === 0 ? (
         <EmptyState
           icon={UserIcon}
           title="No users found"
@@ -93,41 +110,42 @@ export function ManageUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-campus-gray-200">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-campus-gray-50">
+                {filteredUsers.map((u) => (
+                  <tr key={u.id} className="hover:bg-campus-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <img
-                          src={user.avatar}
-                          alt={user.name}
+                          src={
+                            u.avatar ||
+                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`
+                          }
+                          alt={u.name}
                           className="w-10 h-10 rounded-full"
                         />
                         <span className="font-medium text-campus-gray-900">
-                          {user.name}
+                          {u.name}
                         </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-campus-gray-600">
-                      {user.email}
+                      {u.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-3 py-1 text-sm font-medium rounded-full border ${getRoleBadgeColor(
-                          user.role,
+                          u.role,
                         )}`}
                       >
-                        {user.role}
+                        {u.role}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-campus-gray-600">
-                      {formatDate(user.createdAt)}
+                      {formatDate(u.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
-                        value={user.role}
-                        onChange={(e) =>
-                          handleRoleChange(user.id, e.target.value)
-                        }
+                        value={u.role}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
                         className="px-3 py-1 border border-campus-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                       >
                         <option value="USER">User</option>

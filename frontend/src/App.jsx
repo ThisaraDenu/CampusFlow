@@ -4,6 +4,15 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppLayout } from './components/layout/AppLayout'
 
 import { LoginPage } from './components/auth/LoginPage'
+<<<<<<< Updated upstream
+import { SignUpPage } from './components/auth/SignUpPage'
+=======
+<<<<<<< Updated upstream
+=======
+import { SignUpPage } from './components/auth/SignUpPage'
+import { AuthCallbackPage } from './components/auth/AuthCallbackPage'
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 import { DashboardPage } from './components/dashboard/DashboardPage'
 import { ProfilePage } from './components/profile/ProfilePage'
 import { UnauthorizedPage } from './components/misc/UnauthorizedPage'
@@ -23,9 +32,17 @@ import { AssignedTicketsPage } from './components/tickets/AssignedTicketsPage'
 import { NotificationsPage } from './components/notifications/NotificationsPage'
 import { AdminDashboardPage } from './components/admin/AdminDashboardPage'
 import { ManageUsersPage } from './components/admin/ManageUsersPage'
+import { Home } from './components/Home/Home'
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, bootstrapping } = useAuth()
+  if (bootstrapping) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-campus-gray-50 text-campus-gray-600">
+        Loading…
+      </div>
+    )
+  }
   return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />
 }
 
@@ -36,17 +53,48 @@ function RoleProtectedRoute({ allow, children }) {
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, bootstrapping } = useAuth()
 
   return (
     <Routes>
       <Route
         path="/"
         element={
+<<<<<<< Updated upstream
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Home />
+        }
+      />
+
+=======
+<<<<<<< Updated upstream
           isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
         }
       />
 
+=======
+          bootstrapping ? (
+            <div className="min-h-screen flex items-center justify-center bg-campus-gray-50 text-campus-gray-600">
+              Loading…
+            </div>
+          ) : isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <Home />
+          )
+        }
+      />
+
+>>>>>>> Stashed changes
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/signup" element={<SignUpPage />} />
+
+<<<<<<< Updated upstream
+=======
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
       <Route
         path="/dashboard"
         element={
