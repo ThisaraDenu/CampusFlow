@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BuildingIcon,
@@ -19,22 +19,57 @@ import {
   Tooltip,
   Legend,
 } from 'recharts'
-import { store } from '../../services/store'
+import { resourcesApi } from '../../services/resourcesApi'
+import { bookingsApi } from '../../services/bookingsApi'
+import { ticketsApi } from '../../services/ticketsApi'
+import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
 import { StatusBadge } from '../shared/StatusBadge'
 
 export function AdminDashboardPage() {
   const navigate = useNavigate()
+  const [resources, setResources] = useState([])
+  const [bookings, setBookings] = useState([])
+  const [tickets, setTickets] = useState([])
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const pendingBookings = store.bookings.filter((b) => b.status === 'PENDING').length
-  const openTickets = store.tickets.filter(
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [resList, bookList, ticketList, userList] = await Promise.all([
+        resourcesApi.list(),
+        bookingsApi.list(),
+        ticketsApi.list('all'),
+        usersApi.list(),
+      ])
+      setResources(resList)
+      setBookings(bookList)
+      setTickets(ticketList)
+      setUsers(userList)
+    } catch {
+      setResources([])
+      setBookings([])
+      setTickets([])
+      setUsers([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const pendingBookings = bookings.filter((b) => b.status === 'PENDING').length
+  const openTickets = tickets.filter(
     (t) => t.status === 'OPEN' || t.status === 'IN_PROGRESS',
   ).length
 
   const stats = [
     {
       label: 'Total Resources',
-      value: store.resources.length,
+      value: resources.length,
       icon: BuildingIcon,
       color: 'bg-blue-100 text-blue-600',
       link: '/resources',
@@ -55,7 +90,7 @@ export function AdminDashboardPage() {
     },
     {
       label: 'Total Users',
-      value: store.users.length,
+      value: users.length,
       icon: UsersIcon,
       color: 'bg-teal-100 text-teal-600',
       link: '/admin/users',
@@ -65,49 +100,49 @@ export function AdminDashboardPage() {
   const resourceTypeData = [
     {
       name: 'Lecture Halls',
-      count: store.resources.filter((r) => r.type === 'LECTURE_HALL').length,
+      count: resources.filter((r) => r.type === 'LECTURE_HALL').length,
     },
     {
       name: 'Laboratories',
-      count: store.resources.filter((r) => r.type === 'LABORATORY').length,
+      count: resources.filter((r) => r.type === 'LABORATORY').length,
     },
     {
       name: 'Meeting Rooms',
-      count: store.resources.filter((r) => r.type === 'MEETING_ROOM').length,
+      count: resources.filter((r) => r.type === 'MEETING_ROOM').length,
     },
     {
       name: 'Equipment',
-      count: store.resources.filter((r) => r.type === 'EQUIPMENT').length,
+      count: resources.filter((r) => r.type === 'EQUIPMENT').length,
     },
   ]
 
   const ticketStatusData = [
-    { name: 'Open', value: store.tickets.filter((t) => t.status === 'OPEN').length },
+    { name: 'Open', value: tickets.filter((t) => t.status === 'OPEN').length },
     {
       name: 'In Progress',
-      value: store.tickets.filter((t) => t.status === 'IN_PROGRESS').length,
+      value: tickets.filter((t) => t.status === 'IN_PROGRESS').length,
     },
     {
       name: 'Resolved',
-      value: store.tickets.filter((t) => t.status === 'RESOLVED').length,
+      value: tickets.filter((t) => t.status === 'RESOLVED').length,
     },
-    { name: 'Closed', value: store.tickets.filter((t) => t.status === 'CLOSED').length },
+    { name: 'Closed', value: tickets.filter((t) => t.status === 'CLOSED').length },
   ]
 
   const COLORS = ['#0d9488', '#f59e0b', '#10b981', '#6b7280']
 
   const recentActivity = [
-    ...store.bookings.slice(0, 3).map((b) => ({
+    ...bookings.slice(0, 3).map((b) => ({
       id: b.id,
       type: 'booking',
       description: `${b.userName} requested ${b.resourceName}`,
       status: b.status,
       date: b.updatedAt,
     })),
-    ...store.tickets.slice(0, 2).map((t) => ({
+    ...tickets.slice(0, 2).map((t) => ({
       id: t.id,
       type: 'ticket',
-      description: `${t.userName} reported: ${t.description.substring(0, 50)}...`,
+      description: `${t.userName} reported: ${(t.description || '').substring(0, 50)}...`,
       status: t.status,
       date: t.updatedAt,
     })),
@@ -147,6 +182,14 @@ export function AdminDashboardPage() {
       icon: UsersIcon,
     },
   ]
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto py-12 text-center text-campus-gray-600">
+        Loading…
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto">

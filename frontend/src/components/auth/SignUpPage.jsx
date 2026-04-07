@@ -2,7 +2,11 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BuildingIcon, CheckCircleIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+<<<<<<< Updated upstream
 import { store } from '../../services/store'
+=======
+import { fetchGoogleOAuthRedirectUrl } from '../../services/authApi'
+>>>>>>> Stashed changes
 
 function GoogleIcon() {
   return (
@@ -29,13 +33,21 @@ function GoogleIcon() {
 
 export function SignUpPage() {
   const navigate = useNavigate()
+<<<<<<< Updated upstream
   const { register, login } = useAuth()
+=======
+  const { register } = useAuth()
+>>>>>>> Stashed changes
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+<<<<<<< Updated upstream
+=======
+  const [googleBusy, setGoogleBusy] = useState(false)
+>>>>>>> Stashed changes
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -57,6 +69,7 @@ export function SignUpPage() {
 
   const handleGoogleSignUp = async () => {
     setError('')
+<<<<<<< Updated upstream
     setSubmitting(true)
     try {
       const user = store.users.find((u) => u.role === 'USER')
@@ -67,6 +80,16 @@ export function SignUpPage() {
       setError(err?.message || 'Google sign-up failed')
     } finally {
       setSubmitting(false)
+=======
+    setGoogleBusy(true)
+    try {
+      const url = await fetchGoogleOAuthRedirectUrl()
+      window.location.assign(url)
+    } catch (err) {
+      setError(err?.message || 'Could not start Google sign-in')
+    } finally {
+      setGoogleBusy(false)
+>>>>>>> Stashed changes
     }
   }
 
@@ -255,20 +278,34 @@ export function SignUpPage() {
               <button
                 type="button"
                 onClick={handleGoogleSignUp}
+<<<<<<< Updated upstream
                 disabled={submitting}
                 className="w-full flex items-center justify-center gap-2 border-2 border-campus-gray-200 bg-white text-campus-gray-800 py-3 rounded-lg font-medium hover:bg-campus-gray-50 transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
                 <GoogleIcon />
                 Sign up with Google
+=======
+                disabled={submitting || googleBusy}
+                className="w-full flex items-center justify-center gap-2 border-2 border-campus-gray-200 bg-white text-campus-gray-800 py-3 rounded-lg font-medium hover:bg-campus-gray-50 transition-colors disabled:opacity-60 disabled:pointer-events-none"
+              >
+                <GoogleIcon />
+                {googleBusy ? 'Redirecting…' : 'Sign up with Google'}
+>>>>>>> Stashed changes
               </button>
             </form>
 
             <p className="text-xs text-center text-campus-gray-500 mt-6 leading-relaxed">
+<<<<<<< Updated upstream
               Demo: accounts live in memory only (refresh may reset mock users).
               Sign in later with the same email and password you chose here.
               Pre-seeded accounts use password{' '}
               <span className="font-mono text-campus-gray-700">password</span>.
               Google uses the default mock USER account.
+=======
+              Use the same email and password to sign in later. For Google sign-in, configure
+              GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET on the backend and add the redirect URI
+              shown in any configuration error message to Google Cloud Console.
+>>>>>>> Stashed changes
             </p>
           </div>
         </div>
