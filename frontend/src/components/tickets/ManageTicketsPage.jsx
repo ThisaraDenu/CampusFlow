@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchIcon, UserIcon, WrenchIcon } from 'lucide-react'
-import { store } from '../../services/store'
+import { ticketsApi } from '../../services/ticketsApi'
+import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
 import { StatusBadge } from '../shared/StatusBadge'
 import { EmptyState } from '../shared/EmptyState'
@@ -15,9 +16,32 @@ export function ManageTicketsPage() {
   const [categoryFilter, setCategoryFilter] = useState('ALL')
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState(null)
-  const [, setVersion] = useState(0)
+  const [tickets, setTickets] = useState([])
+  const [technicians, setTechnicians] = useState([])
 
-  const filteredTickets = store.tickets.filter((ticket) => {
+  const load = useCallback(async () => {
+    try {
+      setTickets(await ticketsApi.list('all'))
+    } catch {
+      setTickets([])
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        setTechnicians(await usersApi.listTechnicians())
+      } catch {
+        setTechnicians([])
+      }
+    })()
+  }, [])
+
+  const filteredTickets = tickets.filter((ticket) => {
     const matchesTab = activeTab === 'ALL' || ticket.status === activeTab
     const matchesPriority =
       priorityFilter === 'ALL' || ticket.priority === priorityFilter
@@ -68,21 +92,13 @@ export function ManageTicketsPage() {
     setUpdateModalOpen(true)
   }
 
-  const handleUpdate = (newStatus, resolutionNotes, assignedTo) => {
+  const handleUpdate = async (newStatus, resolutionNotes, assignedTo) => {
     if (!selectedTicket) return
-    const idx = store.tickets.findIndex((t) => t.id === selectedTicket.id)
-    if (idx === -1) return
-    store.tickets[idx].status = newStatus
-    if (resolutionNotes) store.tickets[idx].resolutionNotes = resolutionNotes
-    if (assignedTo !== undefined) {
-      store.tickets[idx].assignedTo = assignedTo || undefined
-      const tech = assignedTo
-        ? store.users.find((u) => u.id === assignedTo)
-        : null
-      store.tickets[idx].assignedToName = tech ? tech.name : undefined
-    }
-    store.tickets[idx].updatedAt = new Date().toISOString()
-    setVersion((v) => v + 1)
+    const body = { status: newStatus }
+    if (resolutionNotes) body.resolutionNotes = resolutionNotes
+    if (assignedTo !== undefined) body.assignedTo = assignedTo || null
+    await ticketsApi.update(selectedTicket.id, body)
+    await load()
   }
 
   const tabs = [
@@ -107,8 +123,8 @@ export function ManageTicketsPage() {
             {tabs.map((tab) => {
               const count =
                 tab.id === 'ALL'
-                  ? store.tickets.length
-                  : store.tickets.filter((t) => t.status === tab.id).length
+                  ? tickets.length
+                  : tickets.filter((t) => t.status === tab.id).length
               return (
                 <button
                   key={tab.id}
@@ -249,6 +265,7 @@ export function ManageTicketsPage() {
           onClose={() => setUpdateModalOpen(false)}
           ticket={selectedTicket}
           onUpdate={handleUpdate}
+          technicians={technicians}
         />
       )}
     </div>
