@@ -1,15 +1,13 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeftIcon } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { resourcesApi } from '../../services/resourcesApi'
+import { bookingsApi } from '../../services/bookingsApi'
 import { PageHeader } from '../shared/PageHeader'
 
 export function CreateBookingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { user } = useAuth()
-
   const initialResourceId = searchParams.get('resourceId') || ''
 
   const [form, setForm] = useState({
@@ -20,27 +18,41 @@ export function CreateBookingPage() {
     purpose: '',
     attendees: 1,
   })
+  const [resources, setResources] = useState([])
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (e) => {
+  const loadResources = useCallback(async () => {
+    try {
+      const list = await resourcesApi.list()
+      setResources(list.filter((r) => r.status === 'ACTIVE'))
+    } catch {
+      setResources([])
+    }
+  }, [])
+
+  useEffect(() => {
+    loadResources()
+  }, [loadResources])
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const resource = store.resources.find((r) => r.id === form.resourceId)
-    if (!resource) return
-    store.bookings.unshift({
-      id: `book-${Date.now()}`,
-      resourceId: resource.id,
-      resourceName: resource.name,
-      userId: user?.id || '',
-      userName: user?.name || '',
-      date: form.date,
-      startTime: form.startTime,
-      endTime: form.endTime,
-      purpose: form.purpose,
-      attendees: Number(form.attendees) || 1,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
-    navigate('/bookings')
+    if (!form.resourceId) return
+    setSubmitting(true)
+    try {
+      await bookingsApi.create({
+        resourceId: form.resourceId,
+        date: form.date,
+        startTime: form.startTime.length === 5 ? `${form.startTime}:00` : form.startTime,
+        endTime: form.endTime.length === 5 ? `${form.endTime}:00` : form.endTime,
+        purpose: form.purpose,
+        attendees: Number(form.attendees) || 1,
+      })
+      navigate('/bookings')
+    } catch (err) {
+      alert(err?.message || 'Could not create booking')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -75,9 +87,7 @@ export function CreateBookingPage() {
             <option value="" disabled>
               Select a resource...
             </option>
-            {store.resources
-              .filter((r) => r.status === 'ACTIVE')
-              .map((r) => (
+            {resources.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
@@ -125,9 +135,10 @@ export function CreateBookingPage() {
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+            disabled={submitting}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-60"
           >
-            Submit Request
+            {submitting ? 'Submitting…' : 'Submit Request'}
           </button>
         </div>
       </form>

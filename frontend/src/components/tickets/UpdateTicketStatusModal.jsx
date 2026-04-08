@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react'
 import { X as XIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { StatusBadge } from '../shared/StatusBadge'
-import { store } from '../../services/store'
 
-export function UpdateTicketStatusModal({ isOpen, onClose, ticket, onUpdate }) {
+export function UpdateTicketStatusModal({
+  isOpen,
+  onClose,
+  ticket,
+  onUpdate,
+  technicians = [],
+}) {
   const [newStatus, setNewStatus] = useState(ticket?.status || 'OPEN')
   const [resolutionNotes, setResolutionNotes] = useState('')
   const [assignedTo, setAssignedTo] = useState(ticket?.assignedTo || '')
-
-  const technicians = store.users.filter((u) => u.role === 'TECHNICIAN')
 
   useEffect(() => {
     if (isOpen && ticket) {

@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { WrenchIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { ticketsApi } from '../../services/ticketsApi'
+import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
 import { StatusBadge } from '../shared/StatusBadge'
 import { EmptyState } from '../shared/EmptyState'
@@ -14,9 +15,33 @@ export function AssignedTicketsPage() {
   const [activeTab, setActiveTab] = useState('ALL')
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState(null)
-  const [, setVersion] = useState(0)
+  const [tickets, setTickets] = useState([])
+  const [technicians, setTechnicians] = useState([])
 
-  const assignedTickets = store.tickets.filter((t) => t.assignedTo === user?.id)
+  const load = useCallback(async () => {
+    try {
+      const list = await ticketsApi.list('assigned')
+      setTickets(list)
+    } catch {
+      setTickets([])
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        setTechnicians(await usersApi.listTechnicians())
+      } catch {
+        setTechnicians([])
+      }
+    })()
+  }, [])
+
+  const assignedTickets = tickets.filter((t) => t.assignedTo === user?.id)
 
   const filteredTickets = assignedTickets.filter((ticket) => {
     if (activeTab === 'ALL') return true
@@ -59,21 +84,13 @@ export function AssignedTicketsPage() {
     setUpdateModalOpen(true)
   }
 
-  const handleUpdate = (newStatus, resolutionNotes, assignedTo) => {
+  const handleUpdate = async (newStatus, resolutionNotes, assignedTo) => {
     if (!selectedTicket) return
-    const idx = store.tickets.findIndex((t) => t.id === selectedTicket.id)
-    if (idx === -1) return
-    store.tickets[idx].status = newStatus
-    if (resolutionNotes) store.tickets[idx].resolutionNotes = resolutionNotes
-    if (assignedTo !== undefined) {
-      store.tickets[idx].assignedTo = assignedTo || undefined
-      const tech = assignedTo
-        ? store.users.find((u) => u.id === assignedTo)
-        : null
-      store.tickets[idx].assignedToName = tech ? tech.name : undefined
-    }
-    store.tickets[idx].updatedAt = new Date().toISOString()
-    setVersion((v) => v + 1)
+    const body = { status: newStatus }
+    if (resolutionNotes) body.resolutionNotes = resolutionNotes
+    if (assignedTo !== undefined) body.assignedTo = assignedTo || null
+    await ticketsApi.update(selectedTicket.id, body)
+    await load()
   }
 
   const tabs = [
@@ -197,6 +214,7 @@ export function AssignedTicketsPage() {
           onClose={() => setUpdateModalOpen(false)}
           ticket={selectedTicket}
           onUpdate={handleUpdate}
+          technicians={technicians}
         />
       )}
     </div>
