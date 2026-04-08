@@ -15,6 +15,7 @@ export function StatusBadge({ status, size = 'md' }) {
         return `${baseStyles} bg-amber-100 text-amber-800 border border-amber-200`
       case 'REJECTED':
       case 'OUT_OF_SERVICE':
+      case 'INACTIVE':
         return `${baseStyles} bg-red-100 text-red-800 border border-red-200`
       case 'CANCELLED':
       case 'CLOSED':
