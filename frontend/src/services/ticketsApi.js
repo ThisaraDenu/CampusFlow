@@ -1,29 +1,59 @@
-import { store } from './store'
+import { apiRequest } from './apiClient'
 
 export const ticketsApi = {
-  async list() {
-    return store.tickets
+  async list(scope = 'my') {
+    const q = new URLSearchParams({ scope })
+    return apiRequest(`/api/tickets?${q.toString()}`)
   },
+
   async getById(id) {
-    return store.tickets.find((t) => t.id === id) || null
+    return apiRequest(`/api/tickets/${id}`)
   },
+
   async create(data) {
-    const ticket = {
-      ...data,
-      id: `ticket-${Date.now()}`,
-      status: 'OPEN',
-      attachments: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    store.tickets.unshift(ticket)
-    return ticket
+    return apiRequest('/api/tickets', { method: 'POST', body: data })
   },
+
   async update(id, patch) {
-    const idx = store.tickets.findIndex((t) => t.id === id)
-    if (idx === -1) return null
-    store.tickets[idx] = { ...store.tickets[idx], ...patch, updatedAt: new Date().toISOString() }
-    return store.tickets[idx]
+    return apiRequest(`/api/tickets/${id}`, { method: 'PATCH', body: patch })
+  },
+
+  async listComments(ticketId) {
+    return apiRequest(`/api/tickets/${ticketId}/comments`)
+  },
+
+  async addComment(ticketId, content) {
+    return apiRequest(`/api/tickets/${ticketId}/comments`, {
+      method: 'POST',
+      body: { content },
+    })
+  },
+
+  async updateComment(ticketId, commentId, content) {
+    return apiRequest(`/api/tickets/${ticketId}/comments/${commentId}`, {
+      method: 'PATCH',
+      body: { content },
+    })
+  },
+
+  async deleteComment(ticketId, commentId) {
+    return apiRequest(`/api/tickets/${ticketId}/comments/${commentId}`, {
+      method: 'DELETE',
+    })
+  },
+
+  async uploadAttachment(ticketId, file) {
+    const form = new FormData()
+    form.append('file', file)
+    return apiRequest(`/api/tickets/${ticketId}/attachments`, {
+      method: 'POST',
+      body: form,
+    })
+  },
+
+  async deleteAttachment(attachmentId) {
+    return apiRequest(`/api/ticket-attachments/${attachmentId}`, {
+      method: 'DELETE',
+    })
   },
 }
-
