@@ -49,17 +49,6 @@ export const authApi = {
     return true
   },
 
-  async switchRole(role) {
-    const data = await apiRequest('/api/auth/switch-role', {
-      method: 'POST',
-      body: { role: String(role).toUpperCase() },
-    })
-    if (data?.token) {
-      setToken(data.token)
-    }
-    return data
-  },
-
   /** Apply token from OAuth hash and return whether a token was present */
   persistTokenFromOAuth(token) {
     if (!token) return false
