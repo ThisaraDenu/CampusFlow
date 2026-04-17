@@ -44,6 +44,22 @@ export const authApi = {
     return apiRequest('/api/auth/me')
   },
 
+  async updateProfile({ name, email }) {
+    return apiRequest('/api/profile', {
+      method: 'PATCH',
+      body: { name, email },
+    })
+  },
+
+  async uploadAvatar(file) {
+    const fd = new FormData()
+    fd.append('file', file)
+    return apiRequest('/api/profile/avatar', {
+      method: 'POST',
+      body: fd,
+    })
+  },
+
   async logout() {
     setToken(null)
     return true
