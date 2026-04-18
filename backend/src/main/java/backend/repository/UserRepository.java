@@ -13,7 +13,5 @@ public interface UserRepository extends JpaRepository<User, String> {
 
 	Optional<User> findByGoogleSub(String googleSub);
 
-	Optional<User> findFirstByRoleOrderByCreatedAtAsc(UserRole role);
-
 	List<User> findByRole(UserRole role);
 }

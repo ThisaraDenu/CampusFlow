@@ -15,7 +15,9 @@ public class WebConfig {
 	@Bean
 	public CorsFilter corsFilter(@Value("${app.cors.allowed-origins:http://localhost:3000}") String allowedOrigins) {
 		CorsConfiguration config = new CorsConfiguration();
-		config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
+		// Treat configured values as patterns so dev URLs like http://192.168.*.*:3000 work.
+		// Exact origins (e.g. http://localhost:3000) are valid patterns too.
+		config.setAllowedOriginPatterns(splitCsv(allowedOrigins));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
 		config.setExposedHeaders(List.of("Authorization"));
@@ -23,5 +25,15 @@ public class WebConfig {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", config);
 		return new CorsFilter(source);
+	}
+
+	private static List<String> splitCsv(String value) {
+		if (value == null || value.isBlank()) {
+			return List.of();
+		}
+		return List.of(value.split("\\s*,\\s*")).stream()
+				.map(String::trim)
+				.filter(v -> !v.isBlank())
+				.toList();
 	}
 }

@@ -80,13 +80,6 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
-  const switchRole = useCallback(async (role) => {
-    const data = await authApi.switchRole(role)
-    const safe = userForClient(data.user)
-    setUser(safe)
-    return safe
-  }, [])
-
   const completeOAuthSession = useCallback(
     async (token) => {
       authApi.persistTokenFromOAuth(token)
@@ -103,7 +96,6 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
-      switchRole,
       completeOAuthSession,
       refreshUser,
     }),
@@ -114,7 +106,6 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
-      switchRole,
       completeOAuthSession,
       refreshUser,
     ],
