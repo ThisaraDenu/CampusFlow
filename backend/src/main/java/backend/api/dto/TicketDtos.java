@@ -39,15 +39,17 @@ public class TicketDtos {
 	) {
 		public static TicketResponse from(
 				Ticket t,
+				String resourceName,
+				String userName,
 				List<AttachmentDto> attachments,
 				String assignedToId,
 				String assignedToName) {
 			return new TicketResponse(
 					t.getId(),
-					t.getResource().getId(),
-					t.getResource().getName(),
-					t.getUser().getId(),
-					t.getUser().getName(),
+					t.getResourceId(),
+					resourceName,
+					t.getUserId(),
+					userName,
 					t.getCategory(),
 					t.getPriority(),
 					t.getDescription(),

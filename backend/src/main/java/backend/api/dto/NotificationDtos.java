@@ -20,7 +20,7 @@ public class NotificationDtos {
 		public static NotificationResponse from(Notification n) {
 			return new NotificationResponse(
 					n.getId(),
-					n.getUser().getId(),
+					n.getUserId(),
 					n.getType(),
 					n.getTitle(),
 					n.getMessage(),
