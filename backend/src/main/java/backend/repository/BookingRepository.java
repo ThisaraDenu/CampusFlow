@@ -1,11 +1,11 @@
 package backend.repository;
 
 import backend.model.Booking;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 
-public interface BookingRepository extends JpaRepository<Booking, String> {
+public interface BookingRepository extends MongoRepository<Booking, String> {
 
-	List<Booking> findByUser_IdOrderByCreatedAtDesc(String userId);
+	List<Booking> findByUserIdOrderByCreatedAtDesc(String userId);
 }

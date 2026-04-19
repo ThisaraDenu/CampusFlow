@@ -1,24 +1,25 @@
 package backend.repository;
 
 import backend.model.TicketAttachment;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 
 import java.time.Instant;
 import java.util.List;
 
-public interface TicketAttachmentRepository extends JpaRepository<TicketAttachment, String> {
+public interface TicketAttachmentRepository extends MongoRepository<TicketAttachment, String> {
 
-	List<TicketAttachment> findByTicket_IdOrderByCreatedAtAsc(String ticketId);
+	List<TicketAttachment> findByTicketIdOrderByCreatedAtAsc(String ticketId);
 
-	@Query(value = """
-			SELECT id, file_name, mime_type, created_at
-			FROM ticket_attachments
-			WHERE ticket_id = :ticketId
-			ORDER BY created_at ASC
-			""", nativeQuery = true)
-	List<Object[]> findMetaRowsByTicketId(@Param("ticketId") String ticketId);
+	interface AttachmentMeta {
+		String getId();
+		String getFileName();
+		String getMimeType();
+		Instant getCreatedAt();
+	}
+
+	@Query(value = "{ 'ticketId': ?0 }", fields = "{ 'content': 0 }")
+	List<AttachmentMeta> findMetaByTicketIdOrderByCreatedAtAsc(String ticketId);
 
 	static Instant toInstant(Object o) {
 		if (o == null) {

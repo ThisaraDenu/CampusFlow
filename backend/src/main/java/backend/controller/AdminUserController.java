@@ -18,18 +18,17 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
 	private final AdminUserService adminUserService;
 
 	@GetMapping
-	@PreAuthorize("hasRole('ADMIN')")
 	public List<UserResponse> list() {
 		return adminUserService.listAll();
 	}
 
 	@PatchMapping("/{id}/role")
-	@PreAuthorize("hasRole('ADMIN')")
 	public UserResponse updateRole(
 			@PathVariable String id,
 			@Valid @RequestBody AdminUserDtos.RoleUpdateRequest req) {
