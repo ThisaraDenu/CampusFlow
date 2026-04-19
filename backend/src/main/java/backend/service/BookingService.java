@@ -33,11 +33,11 @@ public class BookingService {
 		if (u.getRole() == UserRole.ADMIN) {
 			return bookingRepository.findAll().stream()
 					.sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-					.map(BookingDtos.BookingResponse::from)
+					.map(this::toResponse)
 					.toList();
 		}
-		return bookingRepository.findByUser_IdOrderByCreatedAtDesc(u.getId()).stream()
-				.map(BookingDtos.BookingResponse::from)
+		return bookingRepository.findByUserIdOrderByCreatedAtDesc(u.getId()).stream()
+				.map(this::toResponse)
 				.toList();
 	}
 
@@ -46,7 +46,7 @@ public class BookingService {
 		Booking b = bookingRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Booking not found"));
 		assertCanView(b, principal);
-		return BookingDtos.BookingResponse.from(b);
+		return toResponse(b);
 	}
 
 	@Transactional
@@ -57,8 +57,8 @@ public class BookingService {
 		Instant now = Instant.now();
 		Booking b = Booking.builder()
 				.id(UUID.randomUUID().toString())
-				.resource(resource)
-				.user(u)
+				.resourceId(resource.getId())
+				.userId(u.getId())
 				.bookingDate(req.bookingDate())
 				.startTime(req.startTime())
 				.endTime(req.endTime())
@@ -68,7 +68,7 @@ public class BookingService {
 				.createdAt(now)
 				.updatedAt(now)
 				.build();
-		return BookingDtos.BookingResponse.from(bookingRepository.save(b));
+		return toResponse(bookingRepository.save(b));
 	}
 
 	@Transactional
@@ -85,19 +85,40 @@ public class BookingService {
 		b.setStatus(req.status());
 		b.setReviewReason(req.reviewReason());
 		b.setUpdatedAt(Instant.now());
-		return BookingDtos.BookingResponse.from(bookingRepository.save(b));
+		return toResponse(bookingRepository.save(b));
 	}
 
 	@Transactional
 	public BookingDtos.BookingResponse cancel(String id, SecurityUser principal) {
 		Booking b = bookingRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Booking not found"));
-		if (!b.getUser().getId().equals(principal.getUsername())) {
+		if (!b.getUserId().equals(principal.getUsername())) {
 			throw new ForbiddenException();
 		}
 		b.setStatus(BookingStatus.CANCELLED);
 		b.setUpdatedAt(Instant.now());
-		return BookingDtos.BookingResponse.from(bookingRepository.save(b));
+		return toResponse(bookingRepository.save(b));
+	}
+
+	private BookingDtos.BookingResponse toResponse(Booking b) {
+		var resource = resourceRepository.findById(b.getResourceId()).orElse(null);
+		var user = userRepository.findById(b.getUserId()).orElse(null);
+		return new BookingDtos.BookingResponse(
+				b.getId(),
+				b.getResourceId(),
+				resource != null ? resource.getName() : "Unknown",
+				b.getUserId(),
+				user != null ? user.getName() : "Unknown",
+				b.getBookingDate().toString(),
+				b.getStartTime(),
+				b.getEndTime(),
+				b.getPurpose(),
+				b.getAttendees() != null ? b.getAttendees() : 0,
+				b.getStatus(),
+				b.getReviewReason(),
+				b.getCreatedAt(),
+				b.getUpdatedAt()
+		);
 	}
 
 	private void assertCanView(Booking b, SecurityUser principal) {
@@ -105,7 +126,7 @@ public class BookingService {
 		if (u.getRole() == UserRole.ADMIN) {
 			return;
 		}
-		if (!b.getUser().getId().equals(u.getId())) {
+		if (!b.getUserId().equals(u.getId())) {
 			throw new ForbiddenException();
 		}
 	}

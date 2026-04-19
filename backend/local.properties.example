@@ -1,3 +1,18 @@
+############################################################
+# Backend local overrides (DO NOT COMMIT real secrets)
+#
+# Copy this file to:
+# - backend/local.properties (recommended), OR
+# - ./local.properties (repo root)
+#
+# The app already imports optional local.properties files via
+# `spring.config.import` in `application.properties`.
+############################################################
+
+# MongoDB Atlas (example)
+# spring.mongodb.uri=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?appName=CampusFlow
+# spring.mongodb.database=CampusFlow
+
 # Google Sign-In — copy this file to "local.properties" in the same folder (backend/) and replace the two values.
 # Restart the backend after saving. Do not commit local.properties.
 #
