@@ -145,6 +145,20 @@ export function TicketDetailsPage() {
     await loadTicket()
   }
 
+  const handleReject = async () => {
+    const ok = window.confirm(
+      'Reject this ticket? It will be visible to the admin and the user.',
+    )
+    if (!ok) return
+    const reason =
+      window.prompt('Reason for rejection (optional):', '')?.trim() || ''
+    const body = { status: 'REJECTED' }
+    if (reason) body.resolutionNotes = reason
+    await ticketsApi.update(ticket.id, body)
+    await loadTicket()
+    navigate('/technician/tickets')
+  }
+
   const statusSteps = [
     { status: 'OPEN', label: 'Open' },
     { status: 'IN_PROGRESS', label: 'In Progress' },
@@ -183,14 +197,25 @@ export function TicketDetailsPage() {
               </span>
             </div>
           </div>
-          {(isAdmin || isTechnician) && (
-            <button
-              onClick={() => setUpdateModalOpen(true)}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-            >
-              Update Status
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {(isAdmin || isTechnician) && (
+              <button
+                onClick={() => setUpdateModalOpen(true)}
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+              >
+                Update Status
+              </button>
+            )}
+            {isTechnician &&
+              !['REJECTED', 'RESOLVED', 'CLOSED'].includes(ticket.status) && (
+                <button
+                  onClick={handleReject}
+                  className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  Reject
+                </button>
+              )}
+          </div>
         </div>
 
         {ticket.status === 'REJECTED' && (
@@ -316,7 +341,8 @@ export function TicketDetailsPage() {
         onClose={() => setUpdateModalOpen(false)}
         ticket={ticket}
         onUpdate={handleUpdateStatus}
-        technicians={technicians}
+        technicians={isAdmin ? technicians : []}
+        context={isAdmin ? 'admin' : 'technician'}
       />
     </div>
   )
