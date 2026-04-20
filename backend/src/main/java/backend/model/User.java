@@ -31,6 +31,11 @@ public class User {
 
 	private UserRole role;
 
+	/**
+	 * True only for the very first admin account (the "main admin").
+	 */
+	private boolean mainAdmin;
+
 	private String avatar;
 
 	@Indexed(unique = true, sparse = true)
