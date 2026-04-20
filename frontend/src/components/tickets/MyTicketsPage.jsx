@@ -31,6 +31,15 @@ export function MyTicketsPage() {
     load()
   }, [load])
 
+  // Keep statuses fresh while user is on this page (technician/admin may update tickets).
+  useEffect(() => {
+    if (!user?.id) return
+    const t = setInterval(() => {
+      load()
+    }, 8000)
+    return () => clearInterval(t)
+  }, [load, user?.id])
+
   const userTickets = tickets.filter((t) => t.userId === user?.id)
 
   const filteredTickets = userTickets.filter((ticket) => {
