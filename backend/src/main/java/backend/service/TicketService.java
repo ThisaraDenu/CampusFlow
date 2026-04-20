@@ -37,6 +37,7 @@ public class TicketService {
 	private final TicketAttachmentRepository ticketAttachmentRepository;
 	private final CampusResourceRepository resourceRepository;
 	private final UserRepository userRepository;
+	private final CloudinaryImageService cloudinaryImageService;
 
 	@Transactional(readOnly = true)
 	public List<TicketDtos.TicketResponse> list(String scope, SecurityUser principal) {
@@ -209,25 +210,24 @@ public class TicketService {
 		assertCanView(t, principal);
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
 		String mime = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-		byte[] bytes;
-		try {
-			bytes = file.getBytes();
-		} catch (IOException e) {
-			throw new BadRequestException("Could not read file");
+		if (!mime.toLowerCase().startsWith("image/")) {
+			throw new BadRequestException("Only image uploads are allowed");
 		}
 		String original = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload";
 		Instant now = Instant.now();
+		var uploaded = cloudinaryImageService.uploadImage(file, "campusflow/tickets/" + ticketId);
 		TicketAttachment att = TicketAttachment.builder()
 				.id(UUID.randomUUID().toString())
 				.ticketId(t.getId())
 				.uploadedById(u.getId())
 				.fileName(original)
 				.mimeType(mime)
-				.content(bytes)
+				.publicId(uploaded.publicId())
+				.url(uploaded.secureUrl())
 				.createdAt(now)
 				.build();
 		att = ticketAttachmentRepository.save(att);
-		return new TicketDtos.AttachmentDto(att.getId(), att.getFileName(), att.getMimeType(), att.getCreatedAt());
+		return new TicketDtos.AttachmentDto(att.getId(), att.getFileName(), att.getMimeType(), att.getUrl(), att.getCreatedAt());
 	}
 
 	@Transactional(readOnly = true)
@@ -252,6 +252,7 @@ public class TicketService {
 		Ticket t = ticketRepository.findById(att.getTicketId())
 				.orElseThrow(() -> new NotFoundException("Ticket not found"));
 		assertCanView(t, principal);
+		cloudinaryImageService.deleteByPublicId(att.getPublicId());
 		ticketAttachmentRepository.delete(att);
 	}
 
@@ -259,7 +260,7 @@ public class TicketService {
 		List<TicketDtos.AttachmentDto> att = List.of();
 		if (includeAttachments) {
 			att = ticketAttachmentRepository.findMetaByTicketIdOrderByCreatedAtAsc(t.getId()).stream()
-					.map(m -> new TicketDtos.AttachmentDto(m.getId(), m.getFileName(), m.getMimeType(), m.getCreatedAt()))
+					.map(m -> new TicketDtos.AttachmentDto(m.getId(), m.getFileName(), m.getMimeType(), m.getUrl(), m.getCreatedAt()))
 					.toList();
 		}
 		var resourceName = resourceRepository.findById(t.getResourceId()).map(r -> r.getName()).orElse("Unknown");
