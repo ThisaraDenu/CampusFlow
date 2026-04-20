@@ -1,13 +1,13 @@
 package backend.repository;
 
 import backend.model.Ticket;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 
-public interface TicketRepository extends JpaRepository<Ticket, String> {
+public interface TicketRepository extends MongoRepository<Ticket, String> {
 
-	List<Ticket> findByUser_IdOrderByCreatedAtDesc(String userId);
+	List<Ticket> findByUserIdOrderByCreatedAtDesc(String userId);
 
-	List<Ticket> findByAssignedTo_IdOrderByCreatedAtDesc(String assignedToId);
+	List<Ticket> findByAssignedToIdOrderByCreatedAtDesc(String assignedToId);
 }

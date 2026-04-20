@@ -1,11 +1,11 @@
 package backend.repository;
 
 import backend.model.Notification;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 
-public interface NotificationRepository extends JpaRepository<Notification, String> {
+public interface NotificationRepository extends MongoRepository<Notification, String> {
 
-	List<Notification> findByUser_IdOrderByCreatedAtDesc(String userId);
+	List<Notification> findByUserIdOrderByCreatedAtDesc(String userId);
 }

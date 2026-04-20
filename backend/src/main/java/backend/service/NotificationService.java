@@ -24,7 +24,7 @@ public class NotificationService {
 	@Transactional(readOnly = true)
 	public List<NotificationDtos.NotificationResponse> list(SecurityUser principal) {
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
-		return notificationRepository.findByUser_IdOrderByCreatedAtDesc(u.getId()).stream()
+		return notificationRepository.findByUserIdOrderByCreatedAtDesc(u.getId()).stream()
 				.map(NotificationDtos.NotificationResponse::from)
 				.toList();
 	}
@@ -33,7 +33,7 @@ public class NotificationService {
 	public NotificationDtos.NotificationResponse markRead(String id, SecurityUser principal) {
 		Notification n = notificationRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Notification not found"));
-		if (!n.getUser().getId().equals(principal.getUsername())) {
+		if (!n.getUserId().equals(principal.getUsername())) {
 			throw new ForbiddenException();
 		}
 		n.setReadFlag(true);
@@ -43,7 +43,7 @@ public class NotificationService {
 	@Transactional
 	public void markAllRead(SecurityUser principal) {
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
-		List<Notification> rows = notificationRepository.findByUser_IdOrderByCreatedAtDesc(u.getId());
+		List<Notification> rows = notificationRepository.findByUserIdOrderByCreatedAtDesc(u.getId());
 		for (Notification n : rows) {
 			if (!n.isReadFlag()) {
 				n.setReadFlag(true);
