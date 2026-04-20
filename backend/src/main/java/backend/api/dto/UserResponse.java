@@ -10,6 +10,7 @@ public record UserResponse(
 		String name,
 		String email,
 		UserRole role,
+		boolean mainAdmin,
 		String avatar,
 		Instant createdAt
 ) {
@@ -19,6 +20,7 @@ public record UserResponse(
 				u.getName(),
 				u.getEmail(),
 				u.getRole(),
+				u.isMainAdmin(),
 				u.getAvatar(),
 				u.getCreatedAt());
 	}
