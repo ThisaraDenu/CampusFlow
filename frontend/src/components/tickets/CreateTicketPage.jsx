@@ -14,6 +14,7 @@ export function CreateTicketPage() {
   const [description, setDescription] = useState('')
   const [contactInfo, setContactInfo] = useState('')
   const [resources, setResources] = useState([])
+  const [attachments, setAttachments] = useState([])
   const [submitting, setSubmitting] = useState(false)
 
   const loadResources = useCallback(async () => {
@@ -86,12 +87,25 @@ export function CreateTicketPage() {
     }
     setSubmitting(true)
     try {
-      await ticketsApi.create({
+      const created = await ticketsApi.create({
         resourceId,
         category,
         priority,
         description: desc,
       })
+
+      if (attachments.length > 0 && created?.id) {
+        for (const file of attachments) {
+          try {
+            await ticketsApi.uploadAttachment(created.id, file)
+          } catch (err) {
+            // Best-effort: keep ticket, inform user if a file fails.
+            alert(
+              `Ticket created, but attachment "${file.name}" failed to upload.`,
+            )
+          }
+        }
+      }
       navigate('/tickets')
     } catch (err) {
       alert(err?.message || 'Could not create ticket')
@@ -235,15 +249,61 @@ export function CreateTicketPage() {
             <label className="block text-sm font-medium text-campus-gray-700 mb-2">
               Attachments (Optional)
             </label>
-            <div className="border-2 border-dashed border-campus-gray-300 rounded-lg p-8 text-center hover:border-teal-500 transition-colors">
+            <label
+              htmlFor="ticket-attachments"
+              className="border-2 border-dashed border-campus-gray-300 rounded-lg p-8 text-center hover:border-teal-500 transition-colors block cursor-pointer"
+            >
               <UploadIcon className="w-12 h-12 mx-auto text-campus-gray-400 mb-2" />
               <p className="text-sm text-campus-gray-600">
-                Drag and drop files here, or click to browse
+                Click to browse files (images, PDFs, docs, etc.)
               </p>
               <p className="text-xs text-campus-gray-500 mt-1">
-                (Image upload functionality coming soon)
+                Max 10MB per file
               </p>
-            </div>
+            </label>
+            <input
+              id="ticket-attachments"
+              type="file"
+              multiple
+              onChange={(e) => {
+                const files = Array.from(e.target.files || [])
+                setAttachments(files)
+              }}
+              className="hidden"
+            />
+
+            {attachments.length > 0 && (
+              <div className="mt-3 bg-campus-gray-50 border border-campus-gray-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-campus-gray-700 mb-2">
+                  Selected files
+                </p>
+                <ul className="text-sm text-campus-gray-700 space-y-1">
+                  {attachments.map((f) => (
+                    <li key={`${f.name}-${f.size}`} className="flex items-center justify-between gap-2">
+                      <span className="truncate">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setAttachments((prev) =>
+                            prev.filter((x) => x !== f),
+                          )
+                        }
+                        className="text-xs text-red-700 hover:text-red-800"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => setAttachments([])}
+                  className="mt-2 text-xs text-campus-gray-600 hover:text-campus-gray-800"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

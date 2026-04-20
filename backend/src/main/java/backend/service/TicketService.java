@@ -210,12 +210,9 @@ public class TicketService {
 		assertCanView(t, principal);
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
 		String mime = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-		if (!mime.toLowerCase().startsWith("image/")) {
-			throw new BadRequestException("Only image uploads are allowed");
-		}
 		String original = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload";
 		Instant now = Instant.now();
-		var uploaded = cloudinaryImageService.uploadImage(file, "campusflow/tickets/" + ticketId);
+		var uploaded = cloudinaryImageService.uploadFile(file, "campusflow/tickets/" + ticketId);
 		TicketAttachment att = TicketAttachment.builder()
 				.id(UUID.randomUUID().toString())
 				.ticketId(t.getId())
@@ -252,7 +249,9 @@ public class TicketService {
 		Ticket t = ticketRepository.findById(att.getTicketId())
 				.orElseThrow(() -> new NotFoundException("Ticket not found"));
 		assertCanView(t, principal);
-		cloudinaryImageService.deleteByPublicId(att.getPublicId());
+		String mime = att.getMimeType() != null ? att.getMimeType() : "";
+		String rt = mime.toLowerCase().startsWith("image/") ? "image" : "raw";
+		cloudinaryImageService.deleteByPublicId(att.getPublicId(), rt);
 		ticketAttachmentRepository.delete(att);
 	}
 
