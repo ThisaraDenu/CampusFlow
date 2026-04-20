@@ -40,9 +40,25 @@ public class BookingDtos {
 	) {
 	}
 
+	public record UpdateRequest(
+			@NotNull @JsonProperty("date") LocalDate bookingDate,
+			@NotBlank String startTime,
+			@NotBlank String endTime,
+			String purpose,
+			@NotNull @Min(1) Integer attendees
+	) {
+	}
+
 	public record StatusUpdateRequest(
 			@NotNull BookingStatus status,
 			String reviewReason
+	) {
+	}
+
+	public record ConflictSlot(
+			String startTime,
+			String endTime,
+			BookingStatus status
 	) {
 	}
 }
