@@ -13,6 +13,7 @@ import { resourcesApi } from '../../services/resourcesApi'
 import { bookingsApi } from '../../services/bookingsApi'
 import { ticketsApi } from '../../services/ticketsApi'
 import { notificationsApi } from '../../services/notificationsApi'
+import { usersApi } from '../../services/usersApi'
 import { StatusBadge } from '../shared/StatusBadge'
 
 export function DashboardPage() {
@@ -22,26 +23,34 @@ export function DashboardPage() {
   const [bookings, setBookings] = useState([])
   const [tickets, setTickets] = useState([])
   const [notifications, setNotifications] = useState([])
+  const [technicians, setTechnicians] = useState([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [resList, bookList, ticketList, notifList] = await Promise.all([
-        resourcesApi.list(),
-        bookingsApi.list(),
-        ticketsApi.list('my'),
-        notificationsApi.list(),
-      ])
+      const isTech = user?.role === 'TECHNICIAN'
+
+      const [resList, bookList, ticketList, notifList, techList] =
+        await Promise.all([
+          resourcesApi.list(),
+          bookingsApi.list(),
+          ticketsApi.list(isTech ? 'assigned' : 'my'),
+          notificationsApi.list(),
+          isTech ? usersApi.listTechnicians() : Promise.resolve([]),
+        ])
+
       setResources(resList)
       setBookings(bookList.filter((b) => b.userId === user?.id))
       setTickets(ticketList)
       setNotifications(notifList)
+      setTechnicians(techList)
     } catch {
       setResources([])
       setBookings([])
       setTickets([])
       setNotifications([])
+      setTechnicians([])
     } finally {
       setLoading(false)
     }
@@ -72,36 +81,73 @@ export function DashboardPage() {
     },
   ]
 
-  const stats = [
-    {
-      label: 'Total Resources',
-      value: resources.length,
-      icon: BuildingIcon,
-      color: 'bg-blue-100 text-blue-600',
-      action: () => navigate('/resources'),
-    },
-    {
-      label: 'My Bookings',
-      value: bookings.length,
-      icon: CalendarIcon,
-      color: 'bg-teal-100 text-teal-600',
-      action: () => navigate('/bookings'),
-    },
-    {
-      label: 'My Tickets',
-      value: tickets.length,
-      icon: TicketIcon,
-      color: 'bg-amber-100 text-amber-600',
-      action: () => navigate('/tickets'),
-    },
-    {
-      label: 'Unread Notifications',
-      value: unreadNotifications.length,
-      icon: BellIcon,
-      color: 'bg-red-100 text-red-600',
-      action: () => navigate('/notifications'),
-    },
-  ]
+  const isTechnician = user?.role === 'TECHNICIAN'
+  const closedTicketsCount = tickets.filter((t) => t.status === 'CLOSED').length
+  const activeAssignedCount = tickets.filter(
+    (t) => !['CLOSED', 'REJECTED'].includes(t.status),
+  ).length
+
+  const stats = isTechnician
+    ? [
+        {
+          label: 'Total Tickets',
+          value: tickets.length,
+          icon: TicketIcon,
+          color: 'bg-amber-100 text-amber-600',
+          action: () => navigate('/technician/tickets'),
+        },
+        {
+          label: 'Assigned Tickets',
+          value: activeAssignedCount,
+          icon: TicketIcon,
+          color: 'bg-teal-100 text-teal-600',
+          action: () => navigate('/technician/tickets'),
+        },
+        {
+          label: 'Technicians',
+          value: technicians.length,
+          icon: BuildingIcon,
+          color: 'bg-blue-100 text-blue-600',
+          action: () => navigate('/technician/tickets'),
+        },
+        {
+          label: 'Closed Tickets',
+          value: closedTicketsCount,
+          icon: TicketIcon,
+          color: 'bg-gray-100 text-campus-gray-600',
+          action: () => navigate('/technician/tickets'),
+        },
+      ]
+    : [
+        {
+          label: 'Total Resources',
+          value: resources.length,
+          icon: BuildingIcon,
+          color: 'bg-blue-100 text-blue-600',
+          action: () => navigate('/resources'),
+        },
+        {
+          label: 'My Bookings',
+          value: bookings.length,
+          icon: CalendarIcon,
+          color: 'bg-teal-100 text-teal-600',
+          action: () => navigate('/bookings'),
+        },
+        {
+          label: 'My Tickets',
+          value: tickets.length,
+          icon: TicketIcon,
+          color: 'bg-amber-100 text-amber-600',
+          action: () => navigate('/tickets'),
+        },
+        {
+          label: 'Unread Notifications',
+          value: unreadNotifications.length,
+          icon: BellIcon,
+          color: 'bg-red-100 text-red-600',
+          action: () => navigate('/notifications'),
+        },
+      ]
 
   const userBookings = bookings
   const userTickets = tickets
