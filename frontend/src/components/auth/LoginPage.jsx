@@ -2,39 +2,17 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BuildingIcon, CheckCircleIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-<<<<<<< Updated upstream
-import { store } from '../../services/store'
-=======
-<<<<<<< Updated upstream
-=======
 import { fetchGoogleOAuthRedirectUrl } from '../../services/authApi'
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 
 export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
-<<<<<<< Updated upstream
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-=======
-<<<<<<< Updated upstream
-  const [selectedRole, setSelectedRole] = useState('USER')
-
-  const handleLogin = async () => {
-    await login(selectedRole)
-    navigate('/dashboard')
-=======
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
 
->>>>>>> Stashed changes
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -51,19 +29,6 @@ export function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setError('')
-<<<<<<< Updated upstream
-    setSubmitting(true)
-    try {
-      const user = store.users.find((u) => u.role === 'USER')
-      if (!user) throw new Error('Demo user unavailable')
-      await login(user.email, 'password')
-      navigate('/dashboard')
-    } catch (err) {
-      setError(err?.message || 'Google sign-in failed')
-    } finally {
-      setSubmitting(false)
-    }
-=======
     setGoogleBusy(true)
     try {
       const url = await fetchGoogleOAuthRedirectUrl()
@@ -73,8 +38,6 @@ export function LoginPage() {
     } finally {
       setGoogleBusy(false)
     }
->>>>>>> Stashed changes
->>>>>>> Stashed changes
   }
 
   return (
@@ -198,22 +161,6 @@ export function LoginPage() {
                 </p>
               )}
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< Updated upstream
-            <p className="text-xs text-center text-campus-gray-500 mt-6">
-              This is a demo application. No actual authentication is performed.
-=======
-              {error && (
-                <p
-                  className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2"
-                  role="alert"
-                >
-                  {error}
-                </p>
-              )}
-
->>>>>>> Stashed changes
               <button
                 type="submit"
                 disabled={submitting}
@@ -239,11 +186,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-<<<<<<< Updated upstream
-                disabled={submitting}
-=======
                 disabled={submitting || googleBusy}
->>>>>>> Stashed changes
                 className="w-full flex items-center justify-center gap-2 border-2 border-campus-gray-200 bg-white text-campus-gray-800 py-3 rounded-lg font-medium hover:bg-campus-gray-50 transition-colors disabled:opacity-60 disabled:pointer-events-none"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden>
@@ -264,11 +207,7 @@ export function LoginPage() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-<<<<<<< Updated upstream
-                Sign in with Google
-=======
                 {googleBusy ? 'Redirecting…' : 'Sign in with Google'}
->>>>>>> Stashed changes
               </button>
             </form>
 
@@ -280,10 +219,6 @@ export function LoginPage() {
               >
                 Sign up
               </Link>
-<<<<<<< Updated upstream
-=======
->>>>>>> Stashed changes
->>>>>>> Stashed changes
             </p>
           </div>
         </div>

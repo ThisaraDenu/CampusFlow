@@ -21,7 +21,4 @@ public class AuthDtos {
 
 	public record TokenResponse(String token, UserResponse user) {
 	}
-
-	public record SwitchRoleRequest(@NotBlank String role) {
-	}
 }

@@ -2,7 +2,6 @@ package backend.service;
 
 import backend.exception.BadRequestException;
 import backend.model.User;
-import backend.model.UserRole;
 import backend.repository.UserRepository;
 import backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +26,5 @@ public class AuthService {
 			throw new BadRequestException("Invalid email or password");
 		}
 		return jwtService.createToken(user);
-	}
-
-	@Transactional
-	public String switchToRole(UserRole role) {
-		User target = userRepository.findFirstByRoleOrderByCreatedAtAsc(role)
-				.orElseThrow(() -> new BadRequestException("No user found for role"));
-		return jwtService.createToken(target);
 	}
 }

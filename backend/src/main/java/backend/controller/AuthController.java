@@ -2,7 +2,6 @@ package backend.controller;
 
 import backend.api.dto.AuthDtos;
 import backend.api.dto.UserResponse;
-import backend.model.UserRole;
 import backend.repository.UserRepository;
 import backend.security.SecurityUser;
 import backend.security.JwtService;
@@ -103,15 +102,6 @@ public class AuthController {
 	public UserResponse me(@AuthenticationPrincipal SecurityUser principal) {
 		var user = userAccountService.requireById(principal.getUsername());
 		return UserResponse.from(user);
-	}
-
-	@PostMapping("/switch-role")
-	public AuthDtos.TokenResponse switchRole(@AuthenticationPrincipal SecurityUser principal,
-			@Valid @RequestBody AuthDtos.SwitchRoleRequest req) {
-		UserRole role = UserRole.valueOf(req.role().trim().toUpperCase());
-		String token = authService.switchToRole(role);
-		var target = userRepository.findFirstByRoleOrderByCreatedAtAsc(role).orElseThrow();
-		return new AuthDtos.TokenResponse(token, UserResponse.from(target));
 	}
 
 	private static boolean isUnsetGoogleCredential(String value) {

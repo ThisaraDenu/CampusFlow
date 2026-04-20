@@ -1,20 +1,33 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon, UploadIcon } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
-import { store } from '../../services/store'
+import { resourcesApi } from '../../services/resourcesApi'
+import { ticketsApi } from '../../services/ticketsApi'
 import { PageHeader } from '../shared/PageHeader'
 
 export function CreateTicketPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
-
   const [resourceId, setResourceId] = useState('')
   const [otherLocation, setOtherLocation] = useState('')
   const [category, setCategory] = useState('OTHER')
   const [priority, setPriority] = useState('MEDIUM')
   const [description, setDescription] = useState('')
   const [contactInfo, setContactInfo] = useState('')
+  const [resources, setResources] = useState([])
+  const [submitting, setSubmitting] = useState(false)
+
+  const loadResources = useCallback(async () => {
+    try {
+      const list = await resourcesApi.list()
+      setResources(list.filter((r) => r.status === 'ACTIVE'))
+    } catch {
+      setResources([])
+    }
+  }, [])
+
+  useEffect(() => {
+    loadResources()
+  }, [loadResources])
 
   const categories = [
     { value: 'ELECTRICAL', label: 'Electrical' },
@@ -54,31 +67,37 @@ export function CreateTicketPage() {
     },
   ]
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!description.trim()) {
       alert('Please provide a description')
       return
     }
-
-    const selectedResource = store.resources.find((r) => r.id === resourceId)
-    const newTicket = {
-      id: `ticket-${Date.now()}`,
-      resourceId: resourceId || undefined,
-      resourceName: selectedResource?.name || otherLocation || 'General',
-      userId: user?.id || '',
-      userName: user?.name || '',
-      category,
-      priority,
-      description,
-      status: 'OPEN',
-      attachments: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    if (!resourceId) {
+      alert('Please select a resource (required for the API).')
+      return
     }
-
-    store.tickets.push(newTicket)
-    navigate('/tickets')
+    let desc = description.trim()
+    if (otherLocation.trim()) {
+      desc = `${desc}\n\nLocation note: ${otherLocation.trim()}`
+    }
+    if (contactInfo.trim()) {
+      desc = `${desc}\n\nContact: ${contactInfo.trim()}`
+    }
+    setSubmitting(true)
+    try {
+      await ticketsApi.create({
+        resourceId,
+        category,
+        priority,
+        description: desc,
+      })
+      navigate('/tickets')
+    } catch (err) {
+      alert(err?.message || 'Could not create ticket')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -106,12 +125,15 @@ export function CreateTicketPage() {
               Resource / Location
             </label>
             <select
+              required
               value={resourceId}
               onChange={(e) => setResourceId(e.target.value)}
               className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             >
-              <option value="">Other / General Location</option>
-              {store.resources.map((resource) => (
+              <option value="" disabled>
+                Select a resource…
+              </option>
+              {resources.map((resource) => (
                 <option key={resource.id} value={resource.id}>
                   {resource.name} - {resource.location}
                 </option>
@@ -235,9 +257,10 @@ export function CreateTicketPage() {
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+            disabled={submitting}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-60"
           >
-            Submit Ticket
+            {submitting ? 'Submitting…' : 'Submit Ticket'}
           </button>
         </div>
       </form>

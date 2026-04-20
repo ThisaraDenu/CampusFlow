@@ -28,23 +28,6 @@ public class BookingDtos {
 			Instant createdAt,
 			Instant updatedAt
 	) {
-		public static BookingResponse from(Booking b) {
-			return new BookingResponse(
-					b.getId(),
-					b.getResource().getId(),
-					b.getResource().getName(),
-					b.getUser().getId(),
-					b.getUser().getName(),
-					b.getBookingDate().toString(),
-					b.getStartTime(),
-					b.getEndTime(),
-					b.getPurpose(),
-					b.getAttendees() != null ? b.getAttendees() : 0,
-					b.getStatus(),
-					b.getReviewReason(),
-					b.getCreatedAt(),
-					b.getUpdatedAt());
-		}
 	}
 
 	public record CreateRequest(
