@@ -5,9 +5,11 @@ import backend.exception.BadRequestException;
 import backend.exception.NotFoundException;
 import backend.model.CampusResource;
 import backend.repository.CampusResourceRepository;
+import backend.service.CloudinaryImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.UUID;
 public class CampusResourceService {
 
 	private final CampusResourceRepository resourceRepository;
+	private final CloudinaryImageService cloudinaryImageService;
 
 	@Transactional(readOnly = true)
 	public List<ResourceDtos.ResourceResponse> list() {
@@ -75,6 +78,15 @@ public class CampusResourceService {
 			throw new NotFoundException("Resource not found");
 		}
 		resourceRepository.deleteById(id);
+	}
+
+	@Transactional
+	public ResourceDtos.ResourceResponse uploadImage(String id, MultipartFile file) {
+		CampusResource r = resourceRepository.findById(id)
+				.orElseThrow(() -> new NotFoundException("Resource not found"));
+		var uploaded = cloudinaryImageService.uploadImage(file, "campusflow/resources/" + id);
+		r.setImageUrl(uploaded.secureUrl());
+		return ResourceDtos.ResourceResponse.from(resourceRepository.save(r));
 	}
 
 	private static void validateTimes(String start, String end) {

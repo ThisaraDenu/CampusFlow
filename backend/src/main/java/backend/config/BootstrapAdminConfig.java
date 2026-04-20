@@ -1,5 +1,6 @@
 package backend.config;
 
+import backend.model.User;
 import backend.model.UserRole;
 import backend.repository.UserRepository;
 import backend.service.UserAccountService;
@@ -44,6 +45,11 @@ public class BootstrapAdminConfig {
 					u.setRole(UserRole.ADMIN);
 					changed = true;
 				}
+				// Bootstrap admin is always considered the "main admin".
+				if (!u.isMainAdmin()) {
+					u.setMainAdmin(true);
+					changed = true;
+				}
 				// Keep password in sync for local/dev convenience.
 				if (u.getPasswordHash() == null || u.getPasswordHash().isBlank()) {
 					u.setPasswordHash(passwordEncoder.encode(password));
@@ -62,6 +68,7 @@ public class BootstrapAdminConfig {
 
 			var u = userAccountService.register(name, normalized, password);
 			u.setRole(UserRole.ADMIN);
+			u.setMainAdmin(true);
 			userRepository.save(u);
 		};
 	}

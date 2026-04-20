@@ -4,7 +4,7 @@ import backend.security.SecurityUser;
 import backend.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/api/ticket-attachments")
@@ -21,14 +23,17 @@ public class TicketAttachmentController {
 	private final TicketService ticketService;
 
 	@GetMapping("/{id}/raw")
-	public ResponseEntity<byte[]> downloadRaw(
+	public ResponseEntity<Void> downloadRaw(
 			@PathVariable String id,
 			@AuthenticationPrincipal SecurityUser principal) {
 		var att = ticketService.loadAttachmentForDownload(id, principal);
-		return ResponseEntity.ok()
+		if (att.getUrl() == null || att.getUrl().isBlank()) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.status(HttpStatus.FOUND)
+				.location(URI.create(att.getUrl()))
 				.header(HttpHeaders.CONTENT_DISPOSITION, contentDispositionInline(att.getFileName()))
-				.contentType(MediaType.parseMediaType(att.getMimeType()))
-				.body(att.getContent());
+				.build();
 	}
 
 	@DeleteMapping("/{id}")

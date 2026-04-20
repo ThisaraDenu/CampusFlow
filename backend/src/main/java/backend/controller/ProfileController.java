@@ -6,6 +6,7 @@ import backend.exception.ConflictException;
 import backend.model.User;
 import backend.repository.UserRepository;
 import backend.security.SecurityUser;
+import backend.service.CloudinaryImageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -17,14 +18,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Base64;
-
 @RestController
 @RequestMapping("/api/profile")
 @RequiredArgsConstructor
 public class ProfileController {
 
 	private final UserRepository userRepository;
+	private final CloudinaryImageService cloudinaryImageService;
 
 	@PatchMapping
 	public UserResponse update(
@@ -57,25 +57,10 @@ public class ProfileController {
 	public UserResponse uploadAvatar(
 			@AuthenticationPrincipal SecurityUser principal,
 			@RequestParam("file") MultipartFile file) throws Exception {
-		if (file == null || file.isEmpty()) {
-			throw new IllegalArgumentException("Missing file");
-		}
-		String contentType = file.getContentType();
-		if (contentType == null || !contentType.toLowerCase().startsWith("image/")) {
-			throw new IllegalArgumentException("Only image uploads are allowed");
-		}
-		// Keep avatars small to avoid bloating DB row (stored as data URL in users.avatar).
-		long maxBytes = 2L * 1024 * 1024;
-		if (file.getSize() > maxBytes) {
-			throw new IllegalArgumentException("Image too large (max 2MB)");
-		}
-
-		byte[] bytes = file.getBytes();
-		String base64 = Base64.getEncoder().encodeToString(bytes);
-		String dataUrl = "data:" + contentType + ";base64," + base64;
+		var uploaded = cloudinaryImageService.uploadImage(file, "campusflow/avatars");
 
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
-		u.setAvatar(dataUrl);
+		u.setAvatar(uploaded.secureUrl());
 		return UserResponse.from(userRepository.save(u));
 	}
 }
