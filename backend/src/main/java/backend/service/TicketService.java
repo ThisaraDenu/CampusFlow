@@ -43,14 +43,14 @@ public class TicketService {
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
 		String s = scope == null ? "my" : scope.trim().toLowerCase();
 		List<Ticket> rows = switch (s) {
-			case "assigned" -> ticketRepository.findByAssignedTo_IdOrderByCreatedAtDesc(u.getId());
+			case "assigned" -> ticketRepository.findByAssignedToIdOrderByCreatedAtDesc(u.getId());
 			case "all" -> {
 				if (u.getRole() != UserRole.ADMIN) {
 					throw new ForbiddenException();
 				}
 				yield ticketRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 			}
-			default -> ticketRepository.findByUser_IdOrderByCreatedAtDesc(u.getId());
+			default -> ticketRepository.findByUserIdOrderByCreatedAtDesc(u.getId());
 		};
 		return rows.stream().map(t -> toResponse(t, false)).toList();
 	}
@@ -71,8 +71,8 @@ public class TicketService {
 		Instant now = Instant.now();
 		Ticket t = Ticket.builder()
 				.id(UUID.randomUUID().toString())
-				.resource(resource)
-				.user(u)
+				.resourceId(resource.getId())
+				.userId(u.getId())
 				.category(req.category())
 				.priority(req.priority())
 				.description(req.description())
@@ -95,14 +95,14 @@ public class TicketService {
 		if (req.assignedTo() != null) {
 			String aid = req.assignedTo().isBlank() ? null : req.assignedTo();
 			if (aid == null) {
-				t.setAssignedTo(null);
+				t.setAssignedToId(null);
 			} else {
 				User assignee = userRepository.findById(aid)
 						.orElseThrow(() -> new NotFoundException("Assignee not found"));
 				if (assignee.getRole() != UserRole.TECHNICIAN) {
 					throw new BadRequestException("Assignee must be a technician");
 				}
-				t.setAssignedTo(assignee);
+				t.setAssignedToId(assignee.getId());
 			}
 		}
 		t.setUpdatedAt(Instant.now());
@@ -114,13 +114,13 @@ public class TicketService {
 		Ticket t = ticketRepository.findById(ticketId)
 				.orElseThrow(() -> new NotFoundException("Ticket not found"));
 		assertCanView(t, principal);
-		return ticketCommentRepository.findByTicket_IdOrderByCreatedAtAsc(ticketId).stream()
+		return ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()
 				.map(c -> new TicketDtos.CommentResponse(
 						c.getId(),
 						ticketId,
-						c.getUser().getId(),
-						c.getUser().getName(),
-						c.getUser().getAvatar(),
+						c.getUserId(),
+						userRepository.findById(c.getUserId()).map(User::getName).orElse("Unknown"),
+						userRepository.findById(c.getUserId()).map(User::getAvatar).orElse(null),
 						c.getContent(),
 						c.getCreatedAt()))
 				.toList();
@@ -135,8 +135,8 @@ public class TicketService {
 		Instant now = Instant.now();
 		TicketComment c = TicketComment.builder()
 				.id(UUID.randomUUID().toString())
-				.ticket(t)
-				.user(u)
+				.ticketId(t.getId())
+				.userId(u.getId())
 				.content(req.content())
 				.createdAt(now)
 				.build();
@@ -162,21 +162,22 @@ public class TicketService {
 		assertCanView(t, principal);
 		TicketComment c = ticketCommentRepository.findById(commentId)
 				.orElseThrow(() -> new NotFoundException("Comment not found"));
-		if (!c.getTicket().getId().equals(ticketId)) {
+		if (!c.getTicketId().equals(ticketId)) {
 			throw new NotFoundException("Comment not found");
 		}
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
-		if (!c.getUser().getId().equals(u.getId()) && u.getRole() != UserRole.ADMIN) {
+		if (!c.getUserId().equals(u.getId()) && u.getRole() != UserRole.ADMIN) {
 			throw new ForbiddenException();
 		}
 		c.setContent(req.content());
 		c = ticketCommentRepository.save(c);
+		User commentUser = userRepository.findById(c.getUserId()).orElse(null);
 		return new TicketDtos.CommentResponse(
 				c.getId(),
 				ticketId,
-				c.getUser().getId(),
-				c.getUser().getName(),
-				c.getUser().getAvatar(),
+				c.getUserId(),
+				commentUser != null ? commentUser.getName() : "Unknown",
+				commentUser != null ? commentUser.getAvatar() : null,
 				c.getContent(),
 				c.getCreatedAt());
 	}
@@ -188,11 +189,11 @@ public class TicketService {
 		assertCanView(t, principal);
 		TicketComment c = ticketCommentRepository.findById(commentId)
 				.orElseThrow(() -> new NotFoundException("Comment not found"));
-		if (!c.getTicket().getId().equals(ticketId)) {
+		if (!c.getTicketId().equals(ticketId)) {
 			throw new NotFoundException("Comment not found");
 		}
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
-		if (!c.getUser().getId().equals(u.getId()) && u.getRole() != UserRole.ADMIN) {
+		if (!c.getUserId().equals(u.getId()) && u.getRole() != UserRole.ADMIN) {
 			throw new ForbiddenException();
 		}
 		ticketCommentRepository.delete(c);
@@ -218,8 +219,8 @@ public class TicketService {
 		Instant now = Instant.now();
 		TicketAttachment att = TicketAttachment.builder()
 				.id(UUID.randomUUID().toString())
-				.ticket(t)
-				.uploadedBy(u)
+				.ticketId(t.getId())
+				.uploadedById(u.getId())
 				.fileName(original)
 				.mimeType(mime)
 				.content(bytes)
@@ -233,7 +234,9 @@ public class TicketService {
 	public TicketAttachment loadAttachmentForDownload(String attachmentId, SecurityUser principal) {
 		TicketAttachment att = ticketAttachmentRepository.findById(attachmentId)
 				.orElseThrow(() -> new NotFoundException("Attachment not found"));
-		assertCanView(att.getTicket(), principal);
+		Ticket t = ticketRepository.findById(att.getTicketId())
+				.orElseThrow(() -> new NotFoundException("Ticket not found"));
+		assertCanView(t, principal);
 		return att;
 	}
 
@@ -243,33 +246,29 @@ public class TicketService {
 				.orElseThrow(() -> new NotFoundException("Attachment not found"));
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
 		if (u.getRole() != UserRole.ADMIN
-				&& !att.getUploadedBy().getId().equals(u.getId())) {
+				&& !att.getUploadedById().equals(u.getId())) {
 			throw new ForbiddenException();
 		}
-		assertCanView(att.getTicket(), principal);
+		Ticket t = ticketRepository.findById(att.getTicketId())
+				.orElseThrow(() -> new NotFoundException("Ticket not found"));
+		assertCanView(t, principal);
 		ticketAttachmentRepository.delete(att);
 	}
 
 	private TicketDtos.TicketResponse toResponse(Ticket t, boolean includeAttachments) {
 		List<TicketDtos.AttachmentDto> att = List.of();
 		if (includeAttachments) {
-			att = mapAttachmentMeta(ticketAttachmentRepository.findMetaRowsByTicketId(t.getId()));
+			att = ticketAttachmentRepository.findMetaByTicketIdOrderByCreatedAtAsc(t.getId()).stream()
+					.map(m -> new TicketDtos.AttachmentDto(m.getId(), m.getFileName(), m.getMimeType(), m.getCreatedAt()))
+					.toList();
 		}
-		String assignId = t.getAssignedTo() != null ? t.getAssignedTo().getId() : null;
-		String assignName = t.getAssignedTo() != null ? t.getAssignedTo().getName() : null;
-		return TicketDtos.TicketResponse.from(t, att, assignId, assignName);
-	}
-
-	private static List<TicketDtos.AttachmentDto> mapAttachmentMeta(List<Object[]> rows) {
-		List<TicketDtos.AttachmentDto> out = new ArrayList<>();
-		for (Object[] row : rows) {
-			out.add(new TicketDtos.AttachmentDto(
-					(String) row[0],
-					(String) row[1],
-					(String) row[2],
-					TicketAttachmentRepository.toInstant(row[3])));
-		}
-		return out;
+		var resourceName = resourceRepository.findById(t.getResourceId()).map(r -> r.getName()).orElse("Unknown");
+		var userName = userRepository.findById(t.getUserId()).map(User::getName).orElse("Unknown");
+		String assignId = t.getAssignedToId();
+		String assignName = assignId != null
+				? userRepository.findById(assignId).map(User::getName).orElse(null)
+				: null;
+		return TicketDtos.TicketResponse.from(t, resourceName, userName, att, assignId, assignName);
 	}
 
 	private void assertCanView(Ticket t, SecurityUser principal) {
@@ -277,12 +276,12 @@ public class TicketService {
 		if (u.getRole() == UserRole.ADMIN) {
 			return;
 		}
-		if (t.getUser().getId().equals(u.getId())) {
+		if (t.getUserId().equals(u.getId())) {
 			return;
 		}
 		if (u.getRole() == UserRole.TECHNICIAN
-				&& t.getAssignedTo() != null
-				&& t.getAssignedTo().getId().equals(u.getId())) {
+				&& t.getAssignedToId() != null
+				&& t.getAssignedToId().equals(u.getId())) {
 			return;
 		}
 		throw new ForbiddenException();
@@ -294,8 +293,8 @@ public class TicketService {
 			return;
 		}
 		if (u.getRole() == UserRole.TECHNICIAN
-				&& t.getAssignedTo() != null
-				&& t.getAssignedTo().getId().equals(u.getId())) {
+				&& t.getAssignedToId() != null
+				&& t.getAssignedToId().equals(u.getId())) {
 			return;
 		}
 		throw new ForbiddenException();

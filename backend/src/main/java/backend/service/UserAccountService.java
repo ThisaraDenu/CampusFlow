@@ -50,7 +50,9 @@ public class UserAccountService {
 				.map(existing -> {
 					existing.setGoogleSub(googleSub);
 					existing.setName(name);
-					if (picture != null && !picture.isBlank()) {
+					// Don't overwrite a user-uploaded avatar (stored as data URL).
+					// If the user never customized their avatar (blank/dicebear/etc), then we can use Google's picture.
+					if (picture != null && !picture.isBlank() && shouldReplaceAvatar(existing.getAvatar())) {
 						existing.setAvatar(picture);
 					}
 					return userRepository.save(existing);
@@ -65,6 +67,22 @@ public class UserAccountService {
 						.googleSub(googleSub)
 						.createdAt(Instant.now())
 						.build()));
+	}
+
+	private static boolean shouldReplaceAvatar(String currentAvatar) {
+		if (currentAvatar == null || currentAvatar.isBlank()) {
+			return true;
+		}
+		// If it's a custom uploaded image, keep it.
+		if (currentAvatar.startsWith("data:image/")) {
+			return false;
+		}
+		// Default generated avatar can be replaced.
+		if (currentAvatar.startsWith("https://api.dicebear.com/")) {
+			return true;
+		}
+		// Otherwise preserve whatever the user had.
+		return false;
 	}
 
 	private static String avatarUrl(String seed) {

@@ -9,12 +9,11 @@ import {
   PlusIcon,
   SettingsIcon,
   UsersIcon,
-  LogOutIcon,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 export function Sidebar() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
   const navLinkClass = ({ isActive }) =>
     `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${
@@ -146,16 +145,6 @@ export function Sidebar() {
             <p className="text-xs text-campus-gray-600 truncate">{user?.role}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={async () => {
-            await logout()
-          }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-campus-gray-700 hover:bg-campus-gray-50 rounded-lg transition-colors"
-        >
-          <LogOutIcon className="w-4 h-4" />
-          <span>Logout</span>
-        </button>
       </div>
     </aside>
   )

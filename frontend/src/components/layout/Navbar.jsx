@@ -14,9 +14,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 export function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout, switchRole } = useAuth()
+  const { user, logout } = useAuth()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  const [showRoleMenu, setShowRoleMenu] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
@@ -61,13 +60,6 @@ export function Navbar() {
     if (path === '/admin/users') return 'Manage Users'
     if (path === '/technician/tickets') return 'Assigned Tickets'
     return 'CampusFlow'
-  }
-
-  const handleRoleSwitch = async (role) => {
-    await switchRole(role)
-    setShowRoleMenu(false)
-    setShowProfileMenu(false)
-    navigate('/dashboard')
   }
 
   return (
@@ -134,37 +126,6 @@ export function Navbar() {
                   <UserIcon className="w-4 h-4" />
                   Profile
                 </button>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowRoleMenu(!showRoleMenu)}
-                    className="w-full flex items-center justify-between px-4 py-2 text-sm text-campus-gray-700 hover:bg-campus-gray-50"
-                  >
-                    <span>Switch Role (Demo)</span>
-                    <ChevronDownIcon className="w-4 h-4" />
-                  </button>
-                  {showRoleMenu && (
-                    <div className="absolute left-full top-0 ml-1 w-40 bg-white rounded-lg shadow-lg border border-campus-gray-200 py-1">
-                      <button
-                        onClick={() => handleRoleSwitch('USER')}
-                        className="w-full px-4 py-2 text-sm text-left text-campus-gray-700 hover:bg-campus-gray-50"
-                      >
-                        User
-                      </button>
-                      <button
-                        onClick={() => handleRoleSwitch('ADMIN')}
-                        className="w-full px-4 py-2 text-sm text-left text-campus-gray-700 hover:bg-campus-gray-50"
-                      >
-                        Admin
-                      </button>
-                      <button
-                        onClick={() => handleRoleSwitch('TECHNICIAN')}
-                        className="w-full px-4 py-2 text-sm text-left text-campus-gray-700 hover:bg-campus-gray-50"
-                      >
-                        Technician
-                      </button>
-                    </div>
-                  )}
-                </div>
                 <button
                   onClick={async () => {
                     await logout()
