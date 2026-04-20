@@ -13,6 +13,12 @@
 # spring.mongodb.uri=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?appName=CampusFlow
 # spring.mongodb.database=CampusFlow
 
+# Cloudinary (images)
+# Create in Cloudinary console → copy these 3 values:
+# app.cloudinary.cloud-name=YOUR_CLOUD_NAME
+# app.cloudinary.api-key=YOUR_API_KEY
+# app.cloudinary.api-secret=YOUR_API_SECRET
+
 # Google Sign-In — copy this file to "local.properties" in the same folder (backend/) and replace the two values.
 # Restart the backend after saving. Do not commit local.properties.
 #

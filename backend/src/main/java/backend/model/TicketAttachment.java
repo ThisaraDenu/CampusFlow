@@ -29,7 +29,9 @@ public class TicketAttachment {
 
 	private String mimeType;
 
-	private byte[] content;
+	private String publicId;
+
+	private String url;
 
 	private Instant createdAt;
 }
