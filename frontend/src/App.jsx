@@ -14,6 +14,7 @@ import { ResourceDetailsPage } from './components/resources/ResourceDetailsPage'
 import { AddResourcePage } from './components/resources/AddResourcePage'
 import { EditResourcePage } from './components/resources/EditResourcePage'
 import { MyBookingsPage } from './components/bookings/MyBookingsPage'
+import { BookedResourcesPage } from './components/bookings/BookedResourcesPage'
 import { CreateBookingPage } from './components/bookings/CreateBookingPage'
 import { BookingDetailsPage } from './components/bookings/BookingDetailsPage'
 import { ManageBookingsPage } from './components/bookings/ManageBookingsPage'
@@ -133,6 +134,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <MyBookingsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/bookings/booked"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <BookedResourcesPage />
             </AppLayout>
           </ProtectedRoute>
         }

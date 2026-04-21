@@ -56,11 +56,21 @@ public class TicketService {
 		return rows.stream().map(t -> toResponse(t, false)).toList();
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public TicketDtos.TicketResponse get(String id, SecurityUser principal) {
 		Ticket t = ticketRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Ticket not found"));
 		assertCanView(t, principal);
+		// Mark as viewed when the assigned technician opens the ticket.
+		User u = userRepository.findById(principal.getUsername()).orElseThrow();
+		if (u.getRole() == UserRole.TECHNICIAN
+				&& t.getAssignedToId() != null
+				&& t.getAssignedToId().equals(u.getId())
+				&& !t.isTechnicianViewed()) {
+			t.setTechnicianViewed(true);
+			t.setUpdatedAt(Instant.now());
+			t = ticketRepository.save(t);
+		}
 		return toResponse(t, true);
 	}
 
@@ -78,6 +88,7 @@ public class TicketService {
 				.priority(req.priority())
 				.description(req.description())
 				.status(TicketStatus.OPEN)
+				.technicianViewed(false)
 				.createdAt(now)
 				.updatedAt(now)
 				.build();
@@ -210,12 +221,9 @@ public class TicketService {
 		assertCanView(t, principal);
 		User u = userRepository.findById(principal.getUsername()).orElseThrow();
 		String mime = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-		if (!mime.toLowerCase().startsWith("image/")) {
-			throw new BadRequestException("Only image uploads are allowed");
-		}
 		String original = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload";
 		Instant now = Instant.now();
-		var uploaded = cloudinaryImageService.uploadImage(file, "campusflow/tickets/" + ticketId);
+		var uploaded = cloudinaryImageService.uploadFile(file, "campusflow/tickets/" + ticketId);
 		TicketAttachment att = TicketAttachment.builder()
 				.id(UUID.randomUUID().toString())
 				.ticketId(t.getId())
@@ -252,7 +260,9 @@ public class TicketService {
 		Ticket t = ticketRepository.findById(att.getTicketId())
 				.orElseThrow(() -> new NotFoundException("Ticket not found"));
 		assertCanView(t, principal);
-		cloudinaryImageService.deleteByPublicId(att.getPublicId());
+		String mime = att.getMimeType() != null ? att.getMimeType() : "";
+		String rt = mime.toLowerCase().startsWith("image/") ? "image" : "raw";
+		cloudinaryImageService.deleteByPublicId(att.getPublicId(), rt);
 		ticketAttachmentRepository.delete(att);
 	}
 

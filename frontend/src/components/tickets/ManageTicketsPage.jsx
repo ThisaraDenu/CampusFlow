@@ -14,6 +14,7 @@ export function ManageTicketsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('ALL')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
+  const [unassignedOnly, setUnassignedOnly] = useState(false)
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [tickets, setTickets] = useState([])
@@ -47,13 +48,20 @@ export function ManageTicketsPage() {
       priorityFilter === 'ALL' || ticket.priority === priorityFilter
     const matchesCategory =
       categoryFilter === 'ALL' || ticket.category === categoryFilter
+    const matchesUnassigned = !unassignedOnly || !ticket.assignedTo
     const matchesSearch =
       ticket.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (ticket.resourceName?.toLowerCase() || '').includes(
         searchQuery.toLowerCase(),
       )
-    return matchesTab && matchesPriority && matchesCategory && matchesSearch
+    return (
+      matchesTab &&
+      matchesPriority &&
+      matchesCategory &&
+      matchesUnassigned &&
+      matchesSearch
+    )
   })
 
   const priorityWeight = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }
@@ -188,6 +196,16 @@ export function ManageTicketsPage() {
               <option value="SAFETY">Safety</option>
               <option value="OTHER">Other</option>
             </select>
+
+            <label className="flex items-center gap-2 px-3 py-2 border border-campus-gray-300 rounded-lg bg-white text-sm text-campus-gray-700">
+              <input
+                type="checkbox"
+                checked={unassignedOnly}
+                onChange={(e) => setUnassignedOnly(e.target.checked)}
+                className="accent-teal-600"
+              />
+              Unassigned only
+            </label>
           </div>
         </div>
       </div>

@@ -51,6 +51,10 @@ export function Sidebar() {
           <BuildingIcon className="w-5 h-5" />
           <span>View Resources</span>
         </NavLink>
+        <NavLink to="/bookings/booked" className={navLinkClass}>
+          <CalendarIcon className="w-5 h-5" />
+          <span>Booked Resources</span>
+        </NavLink>
 
         <div className="pt-4 pb-2">
           <p className="px-4 text-xs font-semibold text-campus-gray-500 uppercase tracking-wider">
@@ -71,14 +75,19 @@ export function Sidebar() {
             Tickets
           </p>
         </div>
-        <NavLink to="/tickets" className={navLinkClass}>
+        <NavLink
+          to={user?.role === 'TECHNICIAN' ? '/technician/tickets' : '/tickets'}
+          className={navLinkClass}
+        >
           <TicketIcon className="w-5 h-5" />
-          <span>My Tickets</span>
+          <span>{user?.role === 'TECHNICIAN' ? 'Tickets' : 'My Tickets'}</span>
         </NavLink>
-        <NavLink to="/tickets/create" className={navLinkClass}>
-          <PlusIcon className="w-5 h-5" />
-          <span>Report Incident</span>
-        </NavLink>
+        {user?.role !== 'TECHNICIAN' && (
+          <NavLink to="/tickets/create" className={navLinkClass}>
+            <PlusIcon className="w-5 h-5" />
+            <span>Report Incident</span>
+          </NavLink>
+        )}
 
         <div className="pt-4 pb-2">
           <p className="px-4 text-xs font-semibold text-campus-gray-500 uppercase tracking-wider">
@@ -116,19 +125,7 @@ export function Sidebar() {
           </>
         )}
 
-        {user?.role === 'TECHNICIAN' && (
-          <>
-            <div className="pt-4 pb-2">
-              <p className="px-4 text-xs font-semibold text-campus-gray-500 uppercase tracking-wider">
-                Technician
-              </p>
-            </div>
-            <NavLink to="/technician/tickets" className={navLinkClass}>
-              <TicketIcon className="w-5 h-5" />
-              <span>Assigned Tickets</span>
-            </NavLink>
-          </>
-        )}
+        {/* Technician ticket navigation is shown under Tickets above. */}
       </nav>
 
       <div className="p-4 border-t border-campus-gray-200">

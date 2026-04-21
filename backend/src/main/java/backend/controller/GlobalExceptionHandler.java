@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,6 +56,11 @@ public class GlobalExceptionHandler {
 				.map(FieldError::getDefaultMessage)
 				.collect(Collectors.joining("; "));
 		return ResponseEntity.badRequest().body(Map.of("error", msg));
+	}
+
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<Map<String, String>> noResource(NoResourceFoundException ex) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", ex.getMessage()));
 	}
 
 	@ExceptionHandler(Exception.class)
