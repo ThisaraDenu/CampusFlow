@@ -109,6 +109,14 @@ export function TicketDetailsPage() {
   const isAdmin = user?.role === 'ADMIN'
   const isTechnician =
     user?.role === 'TECHNICIAN' && ticket.assignedTo === user?.id
+  const isReporter = ticket.userId === user?.id
+
+  const displayStatus =
+    isReporter &&
+    ticket.status === 'OPEN' &&
+    (!ticket.assignedTo || ticket.technicianViewed === false)
+      ? 'PENDING'
+      : ticket.status
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -166,9 +174,9 @@ export function TicketDetailsPage() {
     { status: 'CLOSED', label: 'Closed' },
   ]
   const currentStepIndex =
-    ticket.status === 'REJECTED'
+    displayStatus === 'REJECTED'
       ? -1
-      : statusSteps.findIndex((s) => s.status === ticket.status)
+      : statusSteps.findIndex((s) => s.status === displayStatus)
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -187,7 +195,7 @@ export function TicketDetailsPage() {
               Ticket #{ticket.id}
             </h1>
             <div className="flex items-center gap-3">
-              <StatusBadge status={ticket.status} />
+              <StatusBadge status={displayStatus} />
               <span
                 className={`px-3 py-1 text-sm font-medium rounded-full border ${getPriorityColor(
                   ticket.priority,

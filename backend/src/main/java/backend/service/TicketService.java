@@ -38,6 +38,7 @@ public class TicketService {
 	private final CampusResourceRepository resourceRepository;
 	private final UserRepository userRepository;
 	private final CloudinaryImageService cloudinaryImageService;
+	private final NotificationService notificationService;
 
 	@Transactional(readOnly = true)
 	public List<TicketDtos.TicketResponse> list(String scope, SecurityUser principal) {
@@ -56,11 +57,21 @@ public class TicketService {
 		return rows.stream().map(t -> toResponse(t, false)).toList();
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public TicketDtos.TicketResponse get(String id, SecurityUser principal) {
 		Ticket t = ticketRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Ticket not found"));
 		assertCanView(t, principal);
+		// Mark as viewed when the assigned technician opens the ticket.
+		User u = userRepository.findById(principal.getUsername()).orElseThrow();
+		if (u.getRole() == UserRole.TECHNICIAN
+				&& t.getAssignedToId() != null
+				&& t.getAssignedToId().equals(u.getId())
+				&& !t.isTechnicianViewed()) {
+			t.setTechnicianViewed(true);
+			t.setUpdatedAt(Instant.now());
+			t = ticketRepository.save(t);
+		}
 		return toResponse(t, true);
 	}
 
@@ -78,10 +89,20 @@ public class TicketService {
 				.priority(req.priority())
 				.description(req.description())
 				.status(TicketStatus.OPEN)
+				.technicianViewed(false)
 				.createdAt(now)
 				.updatedAt(now)
 				.build();
-		return toResponse(ticketRepository.save(t), true);
+		t = ticketRepository.save(t);
+
+		notificationService.create(
+				u.getId(),
+				"TICKET_CREATED",
+				"Ticket submitted",
+				"Your ticket #" + t.getId() + " (" + resource.getName() + ") was submitted successfully.",
+				t.getId());
+
+		return toResponse(t, true);
 	}
 
 	@Transactional
@@ -89,6 +110,10 @@ public class TicketService {
 		Ticket t = ticketRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Ticket not found"));
 		assertCanUpdate(t, principal);
+
+		final TicketStatus prevStatus = t.getStatus();
+		final String prevAssignedToId = t.getAssignedToId();
+
 		t.setStatus(req.status());
 		if (req.resolutionNotes() != null) {
 			t.setResolutionNotes(req.resolutionNotes());
@@ -107,7 +132,64 @@ public class TicketService {
 			}
 		}
 		t.setUpdatedAt(Instant.now());
-		return toResponse(ticketRepository.save(t), true);
+		t = ticketRepository.save(t);
+
+		final String resourceName = resourceRepository.findById(t.getResourceId()).map(r -> r.getName()).orElse("Unknown");
+		final String newAssignedToId = t.getAssignedToId();
+		final TicketStatus newStatus = t.getStatus();
+
+		if (newAssignedToId != null && !newAssignedToId.equals(prevAssignedToId)) {
+			final String techName = userRepository.findById(newAssignedToId).map(User::getName).orElse("Unknown");
+			notificationService.create(
+					t.getUserId(),
+					"TICKET_ASSIGNED",
+					"Technician assigned",
+					"Your ticket #" + t.getId() + " (" + resourceName + ") was assigned to " + techName + ".",
+					t.getId());
+
+			notificationService.create(
+					newAssignedToId,
+					"TICKET_ASSIGNED_TECH",
+					"New ticket assigned",
+					"Ticket #" + t.getId() + " assigned: " + resourceName + " • Priority: " + t.getPriority() + ".",
+					t.getId());
+		}
+
+		if (newStatus != null && newStatus != prevStatus) {
+			if (newStatus == TicketStatus.REJECTED) {
+				final String techName = newAssignedToId != null
+						? userRepository.findById(newAssignedToId).map(User::getName).orElse("Unknown")
+						: "Unknown";
+				final String reason = t.getResolutionNotes();
+				final String adminMsg = (reason == null || reason.isBlank())
+						? "Ticket #" + t.getId() + " (" + resourceName + ") was rejected by " + techName + "."
+						: "Ticket #" + t.getId() + " (" + resourceName + ") was rejected by " + techName + ". Reason: " + reason;
+				notificationService.notifyAdmins(
+						"TICKET_REJECTED",
+						"Ticket rejected by technician",
+						adminMsg,
+						t.getId());
+
+				final String userMsg = (reason == null || reason.isBlank())
+						? "Your ticket #" + t.getId() + " was rejected."
+						: "Your ticket #" + t.getId() + " was rejected. Reason: " + reason;
+				notificationService.create(
+						t.getUserId(),
+						"TICKET_REJECTED",
+						"Ticket rejected",
+						userMsg,
+						t.getId());
+			} else {
+				notificationService.create(
+						t.getUserId(),
+						"TICKET_STATUS_CHANGED",
+						"Ticket status updated",
+						"Ticket #" + t.getId() + " is now " + newStatus + ".",
+						t.getId());
+			}
+		}
+
+		return toResponse(t, true);
 	}
 
 	@Transactional(readOnly = true)

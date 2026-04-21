@@ -12,6 +12,7 @@ export function AssignedTicketsPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('ALL')
+  const [sortByRecent, setSortByRecent] = useState(false)
   const [tickets, setTickets] = useState([])
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState(null)
@@ -60,6 +61,10 @@ export function AssignedTicketsPage() {
   const priorityWeight = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }
 
   const sortedTickets = [...filteredTickets].sort((a, b) => {
+    // When enabled, show recent first (no date selection).
+    if (sortByRecent) {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    }
     const priorityDiff = priorityWeight[b.priority] - priorityWeight[a.priority]
     if (priorityDiff !== 0) return priorityDiff
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -129,6 +134,17 @@ export function AssignedTicketsPage() {
               </button>
             )
           })}
+        </div>
+        <div className="p-4 border-t border-campus-gray-200 bg-white flex items-center gap-3 flex-wrap">
+          <label className="flex items-center gap-2 px-3 py-2 border border-campus-gray-300 rounded-lg bg-white text-sm text-campus-gray-700">
+            <input
+              type="checkbox"
+              checked={sortByRecent}
+              onChange={(e) => setSortByRecent(e.target.checked)}
+              className="accent-teal-600"
+            />
+            Date filter (recent first)
+          </label>
         </div>
       </div>
 

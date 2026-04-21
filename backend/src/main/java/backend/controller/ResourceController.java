@@ -66,4 +66,13 @@ public class ResourceController {
 			@RequestPart("file") MultipartFile file) {
 		return campusResourceService.uploadImage(id, file);
 	}
+
+	@PostMapping(value = "/{id}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PreAuthorize("hasRole('ADMIN')")
+	public ResourceDtos.ResourceResponse uploadImages(
+			@PathVariable String id,
+			@AuthenticationPrincipal SecurityUser principal,
+			@RequestPart("files") MultipartFile[] files) {
+		return campusResourceService.uploadImages(id, files);
+	}
 }

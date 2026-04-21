@@ -20,4 +20,18 @@ export const resourcesApi = {
   async remove(id) {
     return apiRequest(`/api/resources/${id}`, { method: 'DELETE' })
   },
+
+  async uploadImage(id, file) {
+    const fd = new FormData()
+    fd.append('file', file)
+    return apiRequest(`/api/resources/${id}/image`, { method: 'POST', body: fd })
+  },
+
+  async uploadImages(id, files) {
+    const fd = new FormData()
+    for (const f of files || []) {
+      fd.append('files', f)
+    }
+    return apiRequest(`/api/resources/${id}/images`, { method: 'POST', body: fd })
+  },
 }

@@ -226,10 +226,10 @@ export function BookedResourcesPage() {
                     <img
                       src={r.imageUrl}
                       alt={b.resourceName}
-                      className="w-14 h-14 rounded-lg object-cover border border-campus-gray-200 shrink-0"
+                      className="w-24 h-24 rounded-xl object-cover border border-campus-gray-200 shrink-0"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-lg bg-campus-gray-100 border border-campus-gray-200 shrink-0" />
+                    <div className="w-24 h-24 rounded-xl bg-campus-gray-100 border border-campus-gray-200 shrink-0" />
                   )}
 
                   <div className="min-w-0">
