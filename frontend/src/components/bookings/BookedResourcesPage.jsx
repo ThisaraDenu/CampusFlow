@@ -13,7 +13,7 @@ export function BookedResourcesPage() {
   const [bookings, setBookings] = useState([])
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('ONGOING')
+  const [activeTab, setActiveTab] = useState('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [editOpen, setEditOpen] = useState(false)
   const [selected, setSelected] = useState(null)
@@ -156,8 +156,8 @@ export function BookedResourcesPage() {
       <div className="bg-white rounded-xl shadow-sm border border-campus-gray-200 overflow-hidden mb-6">
         <div className="border-b border-campus-gray-200 flex overflow-x-auto">
           {[
-            { id: 'ONGOING', label: 'Ongoing' },
             { id: 'ALL', label: 'All' },
+            { id: 'ONGOING', label: 'Ongoing' },
           ].map((t) => (
             <button
               key={t.id}
