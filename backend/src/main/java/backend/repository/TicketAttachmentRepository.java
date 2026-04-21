@@ -15,10 +15,11 @@ public interface TicketAttachmentRepository extends MongoRepository<TicketAttach
 		String getId();
 		String getFileName();
 		String getMimeType();
+		String getUrl();
 		Instant getCreatedAt();
 	}
 
-	@Query(value = "{ 'ticketId': ?0 }", fields = "{ 'content': 0 }")
+	@Query(value = "{ 'ticketId': ?0 }")
 	List<AttachmentMeta> findMetaByTicketIdOrderByCreatedAtAsc(String ticketId);
 
 	static Instant toInstant(Object o) {

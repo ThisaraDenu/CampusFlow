@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { WrenchIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { ticketsApi } from '../../services/ticketsApi'
-import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
 import { StatusBadge } from '../shared/StatusBadge'
 import { EmptyState } from '../shared/EmptyState'
@@ -13,10 +12,9 @@ export function AssignedTicketsPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('ALL')
+  const [tickets, setTickets] = useState([])
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState(null)
-  const [tickets, setTickets] = useState([])
-  const [technicians, setTechnicians] = useState([])
 
   const load = useCallback(async () => {
     try {
@@ -31,17 +29,28 @@ export function AssignedTicketsPage() {
     load()
   }, [load])
 
-  useEffect(() => {
-    ;(async () => {
-      try {
-        setTechnicians(await usersApi.listTechnicians())
-      } catch {
-        setTechnicians([])
-      }
-    })()
-  }, [])
-
   const assignedTickets = tickets.filter((t) => t.assignedTo === user?.id)
+
+  const rejectTicket = async (ticketId) => {
+    const ok = window.confirm(
+      'Reject this ticket? It will be visible to the admin and the user.',
+    )
+    if (!ok) return
+    const reason =
+      window.prompt('Reason for rejection (optional):', '')?.trim() || ''
+    const body = { status: 'REJECTED' }
+    if (reason) body.resolutionNotes = reason
+    await ticketsApi.update(ticketId, body)
+    await load()
+  }
+
+  const handleUpdate = async (newStatus, resolutionNotes) => {
+    if (!selectedTicket?.id) return
+    const body = { status: newStatus }
+    if (resolutionNotes) body.resolutionNotes = resolutionNotes
+    await ticketsApi.update(selectedTicket.id, body)
+    await load()
+  }
 
   const filteredTickets = assignedTickets.filter((ticket) => {
     if (activeTab === 'ALL') return true
@@ -78,25 +87,12 @@ export function AssignedTicketsPage() {
       year: 'numeric',
     })
 
-  const handleUpdateClick = (ticket, e) => {
-    e.stopPropagation()
-    setSelectedTicket(ticket)
-    setUpdateModalOpen(true)
-  }
-
-  const handleUpdate = async (newStatus, resolutionNotes, assignedTo) => {
-    if (!selectedTicket) return
-    const body = { status: newStatus }
-    if (resolutionNotes) body.resolutionNotes = resolutionNotes
-    if (assignedTo !== undefined) body.assignedTo = assignedTo || null
-    await ticketsApi.update(selectedTicket.id, body)
-    await load()
-  }
-
   const tabs = [
     { id: 'ALL', label: 'All Assigned' },
+    { id: 'OPEN', label: 'Open' },
     { id: 'IN_PROGRESS', label: 'In Progress' },
     { id: 'RESOLVED', label: 'Resolved' },
+    { id: 'CLOSED', label: 'Closed' },
   ]
 
   return (
@@ -178,13 +174,31 @@ export function AssignedTicketsPage() {
                   <span className="text-sm text-campus-gray-500">
                     {formatDate(ticket.createdAt)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={(e) => handleUpdateClick(ticket, e)}
-                    className="px-3 py-1 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors"
-                  >
-                    Update Progress
-                  </button>
+                  {!['REJECTED', 'RESOLVED', 'CLOSED'].includes(ticket.status) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedTicket(ticket)
+                        setUpdateModalOpen(true)
+                      }}
+                      className="px-3 py-1 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors"
+                    >
+                      Update
+                    </button>
+                  )}
+                  {!['REJECTED', 'RESOLVED', 'CLOSED'].includes(ticket.status) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        rejectTicket(ticket.id)
+                      }}
+                      className="px-3 py-1 bg-red-50 text-red-700 border border-red-200 text-sm rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      Reject
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -214,7 +228,7 @@ export function AssignedTicketsPage() {
           onClose={() => setUpdateModalOpen(false)}
           ticket={selectedTicket}
           onUpdate={handleUpdate}
-          technicians={technicians}
+          context="technician"
         />
       )}
     </div>

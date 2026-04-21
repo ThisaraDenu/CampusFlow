@@ -11,6 +11,7 @@ function userForClient(u) {
     name: u.name,
     email: u.email,
     role: u.role,
+    mainAdmin: !!u.mainAdmin,
     avatar: u.avatar,
     createdAt: u.createdAt,
   }

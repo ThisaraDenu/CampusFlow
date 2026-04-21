@@ -16,6 +16,7 @@ public class TicketDtos {
 			String id,
 			String fileName,
 			String mimeType,
+			String url,
 			Instant createdAt
 	) {
 	}
