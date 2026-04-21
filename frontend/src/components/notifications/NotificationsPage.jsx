@@ -113,7 +113,9 @@ export function NotificationsPage() {
               key={n.id}
               onClick={() => handleClick(n)}
               className={`bg-white rounded-xl shadow-sm border p-4 hover:border-teal-500 transition-colors cursor-pointer ${
-                n.isRead ? 'border-campus-gray-200' : 'border-green-200 bg-green-50/40'
+                n.isRead
+                  ? 'border-campus-gray-200'
+                  : 'border-emerald-300 bg-emerald-50/60'
               }`}
             >
               <div className="flex items-start gap-4">
