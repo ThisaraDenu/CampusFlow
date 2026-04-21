@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.List;
 
 @Document(collection = "resources")
 @Getter
@@ -38,6 +39,17 @@ public class CampusResource {
 	private String description;
 
 	private String imageUrl;
+
+	private List<String> imageUrls;
+
+	private List<String> availableDays;
+
+	private List<String> amenities;
+
+	// Type-specific optional fields
+	private String equipmentSerialNumber;
+
+	private String labSafetyNotes;
 
 	private Instant createdAt;
 }
