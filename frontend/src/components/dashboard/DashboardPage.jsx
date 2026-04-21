@@ -74,12 +74,15 @@ export function DashboardPage() {
       icon: PlusIcon,
       action: () => navigate('/bookings/create'),
     },
-    {
+  ]
+
+  if (user?.role !== 'TECHNICIAN') {
+    quickActions.push({
       label: 'Report Incident',
       icon: TicketIcon,
       action: () => navigate('/tickets/create'),
-    },
-  ]
+    })
+  }
 
   const isTechnician = user?.role === 'TECHNICIAN'
   const closedTicketsCount = tickets.filter((t) => t.status === 'CLOSED').length
