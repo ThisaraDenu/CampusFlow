@@ -1,6 +1,7 @@
 package backend.config;
 
 import backend.security.JwtAuthFilter;
+import backend.security.OAuth2LoginFailureHandler;
 import backend.security.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,7 @@ public class SecurityConfig {
 
 	private final JwtAuthFilter jwtAuthFilter;
 	private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+	private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -45,7 +47,9 @@ public class SecurityConfig {
 						.requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
 						.requestMatchers("/api/**").authenticated()
 						.anyRequest().permitAll())
-				.oauth2Login(o -> o.successHandler(oAuth2LoginSuccessHandler))
+				.oauth2Login(o -> o
+						.successHandler(oAuth2LoginSuccessHandler)
+						.failureHandler(oAuth2LoginFailureHandler))
 				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}

@@ -51,6 +51,10 @@ export function Sidebar() {
           <BuildingIcon className="w-5 h-5" />
           <span>View Resources</span>
         </NavLink>
+        <NavLink to="/bookings/booked" className={navLinkClass}>
+          <CalendarIcon className="w-5 h-5" />
+          <span>Booked Resources</span>
+        </NavLink>
 
         <div className="pt-4 pb-2">
           <p className="px-4 text-xs font-semibold text-campus-gray-500 uppercase tracking-wider">

@@ -49,10 +49,19 @@ export function EditResourcePage() {
           data.availabilityEnd.length === 5
             ? `${data.availabilityEnd}:00`
             : data.availabilityEnd,
+        availableDays: data.availableDays || null,
         status: data.status,
         description: data.description || null,
-        imageUrl: data.imageUrl || null,
+        amenities: data.amenities || [],
+        equipmentSerialNumber: data.equipmentSerialNumber || null,
+        labSafetyNotes: data.labSafetyNotes || null,
+        imageUrl: null,
       })
+      if (data.imageFiles?.length) {
+        await resourcesApi.uploadImages(id, data.imageFiles)
+      } else if (data.imageFile) {
+        await resourcesApi.uploadImage(id, data.imageFile)
+      }
       navigate(`/resources/${id}`)
     } catch (e) {
       alert(e?.message || 'Could not update resource')
@@ -82,6 +91,10 @@ export function EditResourcePage() {
     ...resource,
     availabilityStart: resource.availabilityStart?.slice(0, 5) || resource.availabilityStart,
     availabilityEnd: resource.availabilityEnd?.slice(0, 5) || resource.availabilityEnd,
+    availableDays: resource.availableDays || [],
+    amenities: resource.amenities || [],
+    equipmentSerialNumber: resource.equipmentSerialNumber || '',
+    labSafetyNotes: resource.labSafetyNotes || '',
   }
 
   return (

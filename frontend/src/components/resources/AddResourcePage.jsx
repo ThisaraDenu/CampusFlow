@@ -13,7 +13,7 @@ export function AddResourcePage() {
     if (submitting) return
     setSubmitting(true)
     try {
-      await resourcesApi.create({
+      const created = await resourcesApi.create({
         name: data.name,
         type: data.type,
         capacity: data.capacity,
@@ -26,10 +26,21 @@ export function AddResourcePage() {
           data.availabilityEnd.length === 5
             ? `${data.availabilityEnd}:00`
             : data.availabilityEnd,
+        availableDays: data.availableDays || null,
         status: data.status,
         description: data.description || null,
-        imageUrl: data.imageUrl || null,
+        amenities: data.amenities || [],
+        equipmentSerialNumber: data.equipmentSerialNumber || null,
+        labSafetyNotes: data.labSafetyNotes || null,
+        imageUrl: null,
       })
+      if (created?.id) {
+        if (data.imageFiles?.length) {
+          await resourcesApi.uploadImages(created.id, data.imageFiles)
+        } else if (data.imageFile) {
+          await resourcesApi.uploadImage(created.id, data.imageFile)
+        }
+      }
       navigate('/resources')
     } catch (e) {
       alert(e?.message || 'Could not create resource')
