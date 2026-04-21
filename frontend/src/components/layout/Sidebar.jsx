@@ -82,10 +82,12 @@ export function Sidebar() {
           <TicketIcon className="w-5 h-5" />
           <span>{user?.role === 'TECHNICIAN' ? 'Tickets' : 'My Tickets'}</span>
         </NavLink>
-        <NavLink to="/tickets/create" className={navLinkClass}>
-          <PlusIcon className="w-5 h-5" />
-          <span>Report Incident</span>
-        </NavLink>
+        {user?.role !== 'TECHNICIAN' && (
+          <NavLink to="/tickets/create" className={navLinkClass}>
+            <PlusIcon className="w-5 h-5" />
+            <span>Report Incident</span>
+          </NavLink>
+        )}
 
         <div className="pt-4 pb-2">
           <p className="px-4 text-xs font-semibold text-campus-gray-500 uppercase tracking-wider">

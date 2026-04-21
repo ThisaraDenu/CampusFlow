@@ -28,6 +28,7 @@ public class BookingService {
 	private final BookingRepository bookingRepository;
 	private final CampusResourceRepository resourceRepository;
 	private final UserRepository userRepository;
+	private final NotificationService notificationService;
 
 	@Transactional(readOnly = true)
 	public List<BookingDtos.BookingResponse> listFor(SecurityUser principal) {
@@ -83,7 +84,24 @@ public class BookingService {
 				.createdAt(now)
 				.updatedAt(now)
 				.build();
-		return toResponse(bookingRepository.save(b));
+		b = bookingRepository.save(b);
+
+		notificationService.create(
+				u.getId(),
+				"BOOKING_CREATED",
+				"Booking request submitted",
+				"Your booking request for " + resource.getName() + " on " + b.getBookingDate()
+						+ " (" + b.getStartTime() + "–" + b.getEndTime() + ") was submitted.",
+				b.getId());
+
+		notificationService.notifyAdmins(
+				"BOOKING_CREATED",
+				"New booking request",
+				u.getName() + " requested " + resource.getName() + " on " + b.getBookingDate()
+						+ " (" + b.getStartTime() + "–" + b.getEndTime() + ").",
+				b.getId());
+
+		return toResponse(b);
 	}
 
 	@Transactional
@@ -97,6 +115,7 @@ public class BookingService {
 		}
 		Booking b = bookingRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Booking not found"));
+		final BookingStatus prevStatus = b.getStatus();
 
 		// When approving, ensure only ONE booking can win a slot.
 		if (req.status() == BookingStatus.APPROVED) {
@@ -118,13 +137,29 @@ public class BookingService {
 				b.setStatus(BookingStatus.REJECTED);
 				b.setReviewReason("Time slot already booked");
 				b.setUpdatedAt(Instant.now());
-				return toResponse(bookingRepository.save(b));
+				b = bookingRepository.save(b);
+				var resourceName = resourceRepository.findById(b.getResourceId()).map(r -> r.getName()).orElse("Unknown");
+				notificationService.create(
+						b.getUserId(),
+						"BOOKING_AUTO_REJECTED",
+						"Booking not available",
+						"Your booking for " + resourceName + " on " + b.getBookingDate() + " (" + b.getStartTime() + "–" + b.getEndTime() + ") was rejected because the time slot was taken.",
+						b.getId());
+				return toResponse(b);
 			}
 
 			b.setStatus(BookingStatus.APPROVED);
 			b.setReviewReason(req.reviewReason());
 			b.setUpdatedAt(Instant.now());
 			b = bookingRepository.save(b);
+
+			var resourceName = resourceRepository.findById(b.getResourceId()).map(r -> r.getName()).orElse("Unknown");
+			notificationService.create(
+					b.getUserId(),
+					"BOOKING_APPROVED",
+					"Booking approved",
+					"Your booking for " + resourceName + " on " + b.getBookingDate() + " (" + b.getStartTime() + "–" + b.getEndTime() + ") was approved.",
+					b.getId());
 
 			// Auto-reject other pending overlaps for the same slot.
 			List<Booking> toReject = sameDay.stream()
@@ -136,7 +171,14 @@ public class BookingService {
 				x.setStatus(BookingStatus.REJECTED);
 				x.setReviewReason("Time slot already booked");
 				x.setUpdatedAt(Instant.now());
-				bookingRepository.save(x);
+				x = bookingRepository.save(x);
+				var rn = resourceRepository.findById(x.getResourceId()).map(r -> r.getName()).orElse("Unknown");
+				notificationService.create(
+						x.getUserId(),
+						"BOOKING_AUTO_REJECTED",
+						"Booking not available",
+						"Your booking for " + rn + " on " + x.getBookingDate() + " (" + x.getStartTime() + "–" + x.getEndTime() + ") was rejected because the time slot was taken.",
+						x.getId());
 			}
 
 			return toResponse(b);
@@ -145,7 +187,25 @@ public class BookingService {
 		b.setStatus(req.status());
 		b.setReviewReason(req.reviewReason());
 		b.setUpdatedAt(Instant.now());
-		return toResponse(bookingRepository.save(b));
+		b = bookingRepository.save(b);
+
+		if (b.getStatus() != null && b.getStatus() != prevStatus) {
+			var resourceName = resourceRepository.findById(b.getResourceId()).map(r -> r.getName()).orElse("Unknown");
+			if (b.getStatus() == BookingStatus.REJECTED) {
+				String reason = b.getReviewReason();
+				String msg = (reason == null || reason.isBlank())
+						? "Your booking for " + resourceName + " on " + b.getBookingDate() + " (" + b.getStartTime() + "–" + b.getEndTime() + ") was rejected."
+						: "Your booking for " + resourceName + " on " + b.getBookingDate() + " (" + b.getStartTime() + "–" + b.getEndTime() + ") was rejected. Reason: " + reason;
+				notificationService.create(
+						b.getUserId(),
+						"BOOKING_REJECTED",
+						"Booking rejected",
+						msg,
+						b.getId());
+			}
+		}
+
+		return toResponse(b);
 	}
 
 	@Transactional(readOnly = true)
@@ -278,7 +338,14 @@ public class BookingService {
 		}
 		b.setStatus(BookingStatus.CANCELLED);
 		b.setUpdatedAt(Instant.now());
-		return toResponse(bookingRepository.save(b));
+		b = bookingRepository.save(b);
+		var resourceName = resourceRepository.findById(b.getResourceId()).map(r -> r.getName()).orElse("Unknown");
+		notificationService.notifyAdmins(
+				"BOOKING_CANCELLED",
+				"Booking cancelled",
+				u.getName() + " cancelled " + resourceName + " on " + b.getBookingDate() + " (" + b.getStartTime() + "–" + b.getEndTime() + ").",
+				b.getId());
+		return toResponse(b);
 	}
 
 	private BookingDtos.BookingResponse toResponse(Booking b) {
