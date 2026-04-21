@@ -35,6 +35,12 @@ public class Ticket {
 
 	private String assignedToId;
 
+	/**
+	 * When a technician is assigned, the ticket stays OPEN but the reporter should not see it as "OPEN"
+	 * until the assigned technician actually opens the ticket details.
+	 */
+	private boolean technicianViewed;
+
 	private String resolutionNotes;
 
 	private Instant createdAt;

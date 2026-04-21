@@ -56,11 +56,21 @@ public class TicketService {
 		return rows.stream().map(t -> toResponse(t, false)).toList();
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public TicketDtos.TicketResponse get(String id, SecurityUser principal) {
 		Ticket t = ticketRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Ticket not found"));
 		assertCanView(t, principal);
+		// Mark as viewed when the assigned technician opens the ticket.
+		User u = userRepository.findById(principal.getUsername()).orElseThrow();
+		if (u.getRole() == UserRole.TECHNICIAN
+				&& t.getAssignedToId() != null
+				&& t.getAssignedToId().equals(u.getId())
+				&& !t.isTechnicianViewed()) {
+			t.setTechnicianViewed(true);
+			t.setUpdatedAt(Instant.now());
+			t = ticketRepository.save(t);
+		}
 		return toResponse(t, true);
 	}
 
@@ -78,6 +88,7 @@ public class TicketService {
 				.priority(req.priority())
 				.description(req.description())
 				.status(TicketStatus.OPEN)
+				.technicianViewed(false)
 				.createdAt(now)
 				.updatedAt(now)
 				.build();
