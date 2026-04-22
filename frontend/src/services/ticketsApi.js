@@ -18,6 +18,10 @@ export const ticketsApi = {
     return apiRequest(`/api/tickets/${id}`, { method: 'PATCH', body: patch })
   },
 
+  async delete(id) {
+    return apiRequest(`/api/tickets/${id}`, { method: 'DELETE' })
+  },
+
   async listComments(ticketId) {
     return apiRequest(`/api/tickets/${ticketId}/comments`)
   },
