@@ -47,11 +47,11 @@ const HERO_INTERVAL_MS = 6000
 
 const IMAGES = {
   bookings:
-    '/landing/sliit-library.png',
+    '/landing/facility-asset-bookings.png',
   tickets:
-    '/landing/sliit-computer-lab.png',
+    '/landing/incidents-maintenance.png',
   notifications:
-    '/landing/sliit-convocation.png',
+    '/landing/timely-notifications.png',
 }
 
 const features = [
