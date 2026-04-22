@@ -337,6 +337,27 @@ public class TicketService {
 		ticketAttachmentRepository.delete(att);
 	}
 
+	@Transactional
+	public void adminDelete(String id, SecurityUser principal) {
+		User u = userRepository.findById(principal.getUsername()).orElseThrow();
+		if (u.getRole() != UserRole.ADMIN) {
+			throw new ForbiddenException();
+		}
+		Ticket t = ticketRepository.findById(id)
+				.orElseThrow(() -> new NotFoundException("Ticket not found"));
+
+		// Delete attachments from Cloudinary (and DB), then comments, then the ticket itself.
+		List<TicketAttachment> atts = ticketAttachmentRepository.findByTicketIdOrderByCreatedAtAsc(t.getId());
+		for (TicketAttachment att : atts) {
+			String mime = att.getMimeType() != null ? att.getMimeType() : "";
+			String rt = mime.toLowerCase().startsWith("image/") ? "image" : "raw";
+			cloudinaryImageService.deleteByPublicId(att.getPublicId(), rt);
+		}
+		ticketAttachmentRepository.deleteByTicketId(t.getId());
+		ticketCommentRepository.deleteByTicketId(t.getId());
+		ticketRepository.delete(t);
+	}
+
 	private TicketDtos.TicketResponse toResponse(Ticket t, boolean includeAttachments) {
 		List<TicketDtos.AttachmentDto> att = List.of();
 		if (includeAttachments) {

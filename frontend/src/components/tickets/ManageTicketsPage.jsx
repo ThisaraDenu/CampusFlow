@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchIcon, UserIcon, WrenchIcon } from 'lucide-react'
+import { SearchIcon, Trash2Icon, UserIcon, WrenchIcon } from 'lucide-react'
 import { ticketsApi } from '../../services/ticketsApi'
 import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
@@ -106,6 +106,16 @@ export function ManageTicketsPage() {
     if (resolutionNotes) body.resolutionNotes = resolutionNotes
     if (assignedTo !== undefined) body.assignedTo = assignedTo || null
     await ticketsApi.update(selectedTicket.id, body)
+    await load()
+  }
+
+  const handleDeleteClick = async (ticket, e) => {
+    e.stopPropagation()
+    const ok = window.confirm(
+      `Delete ticket #${ticket.id}?\n\nThis will permanently remove the ticket, its comments, and attachments.`,
+    )
+    if (!ok) return
+    await ticketsApi.delete(ticket.id)
     await load()
   }
 
@@ -264,13 +274,25 @@ export function ManageTicketsPage() {
                     {formatDate(ticket.createdAt)}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => handleUpdateClick(ticket, e)}
-                  className="px-3 py-1 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors shrink-0"
-                >
-                  Update
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => handleUpdateClick(ticket, e)}
+                    className="px-3 py-1 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors"
+                  >
+                    Update
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteClick(ticket, e)}
+                    className="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors inline-flex items-center gap-1"
+                    aria-label={`Delete ticket ${ticket.id}`}
+                    title="Delete ticket"
+                  >
+                    <Trash2Icon className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
