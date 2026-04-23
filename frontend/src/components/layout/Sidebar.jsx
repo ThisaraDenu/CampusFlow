@@ -4,6 +4,7 @@ import {
   LayoutDashboardIcon,
   BuildingIcon,
   CalendarIcon,
+  BarChart3Icon,
   TicketIcon,
   BellIcon,
   PlusIcon,
@@ -113,6 +114,10 @@ export function Sidebar() {
             <NavLink to="/admin/bookings" className={navLinkClass}>
               <CalendarIcon className="w-5 h-5" />
               <span>Manage Bookings</span>
+            </NavLink>
+            <NavLink to="/admin/analytics" className={navLinkClass}>
+              <BarChart3Icon className="w-5 h-5" />
+              <span>Analytics</span>
             </NavLink>
             <NavLink to="/admin/tickets" className={navLinkClass}>
               <TicketIcon className="w-5 h-5" />
