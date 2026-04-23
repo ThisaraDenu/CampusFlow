@@ -6,7 +6,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({
+		JwtProperties.class,
+		backend.config.BookingApprovalRulesProperties.class
+})
 public class BackendApplication {
 
 	public static void main(String[] args) {
