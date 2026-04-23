@@ -57,6 +57,13 @@ public class TicketController {
 		return ticketService.update(id, principal, req);
 	}
 
+	@DeleteMapping("/{id}")
+	public void adminDelete(
+			@PathVariable String id,
+			@AuthenticationPrincipal SecurityUser principal) {
+		ticketService.adminDelete(id, principal);
+	}
+
 	@GetMapping("/{ticketId}/comments")
 	public List<TicketDtos.CommentResponse> listComments(
 			@PathVariable String ticketId,

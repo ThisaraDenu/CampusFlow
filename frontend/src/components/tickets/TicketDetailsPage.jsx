@@ -101,7 +101,11 @@ export function TicketDetailsPage() {
           loadError ||
           "The ticket you're looking for doesn't exist or has been removed."
         }
-        onRetry={() => navigate('/tickets')}
+        onRetry={() => {
+          if (user?.role === 'ADMIN') return navigate('/admin/tickets')
+          if (user?.role === 'TECHNICIAN') return navigate('/technician/tickets')
+          return navigate('/tickets')
+        }}
       />
     )
   }
@@ -178,14 +182,22 @@ export function TicketDetailsPage() {
       ? -1
       : statusSteps.findIndex((s) => s.status === displayStatus)
 
+  const backPath = isAdmin
+    ? '/admin/tickets'
+    : user?.role === 'TECHNICIAN'
+      ? '/technician/tickets'
+      : '/tickets'
+
+  const backLabel = isAdmin ? 'Back to Manage Tickets' : 'Back to Tickets'
+
   return (
     <div className="max-w-5xl mx-auto">
       <button
-        onClick={() => navigate('/tickets')}
+        onClick={() => navigate(backPath)}
         className="flex items-center gap-2 text-campus-gray-600 hover:text-campus-gray-900 mb-4 transition-colors"
       >
         <ArrowLeftIcon className="w-4 h-4" />
-        Back to Tickets
+        {backLabel}
       </button>
 
       <div className="bg-white rounded-xl shadow-sm border border-campus-gray-200 p-6 mb-6">

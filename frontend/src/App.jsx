@@ -25,6 +25,7 @@ import { ManageTicketsPage } from './components/tickets/ManageTicketsPage'
 import { AssignedTicketsPage } from './components/tickets/AssignedTicketsPage'
 import { NotificationsPage } from './components/notifications/NotificationsPage'
 import { AdminDashboardPage } from './components/admin/AdminDashboardPage'
+import { AdminAnalyticsPage } from './components/admin/AdminAnalyticsPage'
 import { ManageUsersPage } from './components/admin/ManageUsersPage'
 import { Home } from './components/Home/Home'
 
@@ -241,6 +242,18 @@ function AppRoutes() {
             <RoleProtectedRoute allow={['ADMIN']}>
               <AppLayout>
                 <ManageBookingsPage />
+              </AppLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <ProtectedRoute>
+            <RoleProtectedRoute allow={['ADMIN']}>
+              <AppLayout>
+                <AdminAnalyticsPage />
               </AppLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>
