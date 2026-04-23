@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 @Document(collection = "bookings")
 @Getter
@@ -43,4 +44,6 @@ public class Booking {
 	private Instant createdAt;
 
 	private Instant updatedAt;
+
+	private List<BookingAuditEvent> audit;
 }

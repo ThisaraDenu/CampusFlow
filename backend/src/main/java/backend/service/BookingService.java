@@ -1,11 +1,14 @@
 package backend.service;
 
 import backend.api.dto.BookingDtos;
+import backend.config.BookingApprovalRulesProperties;
 import backend.exception.ConflictException;
 import backend.exception.ForbiddenException;
 import backend.exception.NotFoundException;
 import backend.model.Booking;
+import backend.model.BookingAuditEvent;
 import backend.model.BookingStatus;
+import backend.model.CampusResource;
 import backend.model.User;
 import backend.model.UserRole;
 import backend.repository.BookingRepository;
@@ -16,9 +19,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -29,6 +37,7 @@ public class BookingService {
 	private final CampusResourceRepository resourceRepository;
 	private final UserRepository userRepository;
 	private final NotificationService notificationService;
+	private final BookingApprovalRulesProperties approvalRules;
 
 	@Transactional(readOnly = true)
 	public List<BookingDtos.BookingResponse> listFor(SecurityUser principal) {
@@ -83,7 +92,17 @@ public class BookingService {
 				.status(BookingStatus.PENDING)
 				.createdAt(now)
 				.updatedAt(now)
+				.audit(new ArrayList<>())
 				.build();
+
+		appendAudit(b, "CREATED", null, BookingStatus.PENDING, u, null);
+
+		if (shouldAutoApprove(b, resource)) {
+			b.setStatus(BookingStatus.APPROVED);
+			b.setReviewReason("Auto-approved");
+			appendAudit(b, "AUTO_APPROVED", BookingStatus.PENDING, BookingStatus.APPROVED, null, "Met auto-approval rules");
+		}
+
 		b = bookingRepository.save(b);
 
 		notificationService.create(
@@ -94,12 +113,28 @@ public class BookingService {
 						+ " (" + b.getStartTime() + "–" + b.getEndTime() + ") was submitted.",
 				b.getId());
 
-		notificationService.notifyAdmins(
-				"BOOKING_CREATED",
-				"New booking request",
-				u.getName() + " requested " + resource.getName() + " on " + b.getBookingDate()
-						+ " (" + b.getStartTime() + "–" + b.getEndTime() + ").",
-				b.getId());
+		if (b.getStatus() == BookingStatus.APPROVED) {
+			notificationService.create(
+					u.getId(),
+					"BOOKING_AUTO_APPROVED",
+					"Booking auto-approved",
+					"Your booking for " + resource.getName() + " on " + b.getBookingDate()
+							+ " (" + b.getStartTime() + "–" + b.getEndTime() + ") was auto-approved.",
+					b.getId());
+			notificationService.notifyAdmins(
+					"BOOKING_AUTO_APPROVED",
+					"Booking auto-approved",
+					u.getName() + " booking for " + resource.getName() + " on " + b.getBookingDate()
+							+ " (" + b.getStartTime() + "–" + b.getEndTime() + ") was auto-approved.",
+					b.getId());
+		} else {
+			notificationService.notifyAdmins(
+					"BOOKING_CREATED",
+					"New booking request",
+					u.getName() + " requested " + resource.getName() + " on " + b.getBookingDate()
+							+ " (" + b.getStartTime() + "–" + b.getEndTime() + ").",
+					b.getId());
+		}
 
 		return toResponse(b);
 	}
@@ -137,6 +172,7 @@ public class BookingService {
 				b.setStatus(BookingStatus.REJECTED);
 				b.setReviewReason("Time slot already booked");
 				b.setUpdatedAt(Instant.now());
+				appendAudit(b, "REJECTED", prevStatus, BookingStatus.REJECTED, u, b.getReviewReason());
 				b = bookingRepository.save(b);
 				var resourceName = resourceRepository.findById(b.getResourceId()).map(r -> r.getName()).orElse("Unknown");
 				notificationService.create(
@@ -151,6 +187,7 @@ public class BookingService {
 			b.setStatus(BookingStatus.APPROVED);
 			b.setReviewReason(req.reviewReason());
 			b.setUpdatedAt(Instant.now());
+			appendAudit(b, "APPROVED", prevStatus, BookingStatus.APPROVED, u, b.getReviewReason());
 			b = bookingRepository.save(b);
 
 			var resourceName = resourceRepository.findById(b.getResourceId()).map(r -> r.getName()).orElse("Unknown");
@@ -171,6 +208,7 @@ public class BookingService {
 				x.setStatus(BookingStatus.REJECTED);
 				x.setReviewReason("Time slot already booked");
 				x.setUpdatedAt(Instant.now());
+				appendAudit(x, "AUTO_REJECTED", BookingStatus.PENDING, BookingStatus.REJECTED, null, x.getReviewReason());
 				x = bookingRepository.save(x);
 				var rn = resourceRepository.findById(x.getResourceId()).map(r -> r.getName()).orElse("Unknown");
 				notificationService.create(
@@ -187,6 +225,9 @@ public class BookingService {
 		b.setStatus(req.status());
 		b.setReviewReason(req.reviewReason());
 		b.setUpdatedAt(Instant.now());
+		if (!Objects.equals(prevStatus, b.getStatus())) {
+			appendAudit(b, b.getStatus() == BookingStatus.REJECTED ? "REJECTED" : "STATUS_CHANGED", prevStatus, b.getStatus(), u, b.getReviewReason());
+		}
 		b = bookingRepository.save(b);
 
 		if (b.getStatus() != null && b.getStatus() != prevStatus) {
@@ -251,6 +292,16 @@ public class BookingService {
 		b.setPurpose(req.purpose());
 		b.setAttendees(req.attendees());
 		b.setUpdatedAt(Instant.now());
+		appendAudit(b, "UPDATED", BookingStatus.PENDING, BookingStatus.PENDING, u, "User updated booking details");
+
+		// Re-check auto-approval rules after a user update (still pending).
+		var resource = resourceRepository.findById(b.getResourceId()).orElse(null);
+		if (resource != null && shouldAutoApprove(b, resource)) {
+			b.setStatus(BookingStatus.APPROVED);
+			b.setReviewReason("Auto-approved");
+			appendAudit(b, "AUTO_APPROVED", BookingStatus.PENDING, BookingStatus.APPROVED, null, "Met auto-approval rules");
+		}
+
 		return toResponse(bookingRepository.save(b));
 	}
 
@@ -262,6 +313,7 @@ public class BookingService {
 		}
 		Booking b = bookingRepository.findById(id)
 				.orElseThrow(() -> new NotFoundException("Booking not found"));
+		final BookingStatus prevStatus = b.getStatus();
 		final String bookingId = b.getId();
 
 		// Admin can edit, but still cannot create overlapping slots.
@@ -282,6 +334,7 @@ public class BookingService {
 		b.setPurpose(req.purpose());
 		b.setAttendees(req.attendees());
 		b.setUpdatedAt(Instant.now());
+		appendAudit(b, "ADMIN_EDIT", prevStatus, b.getStatus(), u, "Admin edited booking details");
 		b = bookingRepository.save(b);
 
 		// If this booking is approved, reject pending overlaps for the updated slot.
@@ -297,6 +350,7 @@ public class BookingService {
 				x.setStatus(BookingStatus.REJECTED);
 				x.setReviewReason("Time slot already booked");
 				x.setUpdatedAt(Instant.now());
+				appendAudit(x, "AUTO_REJECTED", BookingStatus.PENDING, BookingStatus.REJECTED, null, x.getReviewReason());
 				bookingRepository.save(x);
 			}
 		}
@@ -336,8 +390,10 @@ public class BookingService {
 		if (!b.getUserId().equals(u.getId())) {
 			throw new ForbiddenException();
 		}
+		final BookingStatus prevStatus = b.getStatus();
 		b.setStatus(BookingStatus.CANCELLED);
 		b.setUpdatedAt(Instant.now());
+		appendAudit(b, "CANCELLED", prevStatus, BookingStatus.CANCELLED, u, "User cancelled booking");
 		b = bookingRepository.save(b);
 		var resourceName = resourceRepository.findById(b.getResourceId()).map(r -> r.getName()).orElse("Unknown");
 		notificationService.notifyAdmins(
@@ -351,6 +407,16 @@ public class BookingService {
 	private BookingDtos.BookingResponse toResponse(Booking b) {
 		var resource = resourceRepository.findById(b.getResourceId()).orElse(null);
 		var user = userRepository.findById(b.getUserId()).orElse(null);
+		List<BookingDtos.AuditEvent> audit = (b.getAudit() == null ? List.<BookingAuditEvent>of() : b.getAudit()).stream()
+				.map(e -> new BookingDtos.AuditEvent(
+						e.getType(),
+						e.getFromStatus(),
+						e.getToStatus(),
+						e.getActorId(),
+						e.getActorName(),
+						e.getReason(),
+						e.getAt()))
+				.toList();
 		return new BookingDtos.BookingResponse(
 				b.getId(),
 				b.getResourceId(),
@@ -364,6 +430,7 @@ public class BookingService {
 				b.getAttendees() != null ? b.getAttendees() : 0,
 				b.getStatus(),
 				b.getReviewReason(),
+				audit,
 				b.getCreatedAt(),
 				b.getUpdatedAt()
 		);
@@ -394,5 +461,80 @@ public class BookingService {
 	private boolean blocksSlot(Booking b) {
 		if (b == null || b.getStatus() == null) return false;
 		return b.getStatus() == BookingStatus.PENDING || b.getStatus() == BookingStatus.APPROVED;
+	}
+
+	private void appendAudit(
+			Booking b,
+			String type,
+			BookingStatus from,
+			BookingStatus to,
+			User actor,
+			String reason) {
+		if (b.getAudit() == null) {
+			b.setAudit(new ArrayList<>());
+		}
+		b.getAudit().add(BookingAuditEvent.builder()
+				.type(type)
+				.fromStatus(from)
+				.toStatus(to)
+				.actorId(actor != null ? actor.getId() : null)
+				.actorName(actor != null ? actor.getName() : "SYSTEM")
+				.reason(reason)
+				.at(Instant.now())
+				.build());
+	}
+
+	private boolean shouldAutoApprove(Booking b, CampusResource resource) {
+		if (!approvalRules.isEnabled()) return false;
+		if (b == null || resource == null) return false;
+		if (b.getStatus() != BookingStatus.PENDING) return false;
+
+		LocalTime start = parseTime(b.getStartTime());
+		LocalTime end = parseTime(b.getEndTime());
+		if (start == null || end == null) return false;
+		if (!start.isBefore(end)) return false;
+
+		long minutes = Duration.between(start, end).toMinutes();
+		if (minutes <= 0 || minutes > approvalRules.getMaxDurationMinutes()) return false;
+
+		if (approvalRules.isEnforceCapacity()
+				&& resource.getCapacity() != null
+				&& b.getAttendees() != null
+				&& b.getAttendees() > resource.getCapacity()) {
+			return false;
+		}
+
+		if (approvalRules.isRequireWithinAvailability()
+				&& resource.getAvailabilityStart() != null
+				&& resource.getAvailabilityEnd() != null) {
+			LocalTime availStart = parseTime(resource.getAvailabilityStart());
+			LocalTime availEnd = parseTime(resource.getAvailabilityEnd());
+			if (availStart != null && availEnd != null) {
+				// Require booking to fit completely within the availability window.
+				if (start.isBefore(availStart) || end.isAfter(availEnd)) return false;
+			}
+		}
+
+		// If booking date is in the past, do not auto-approve.
+		LocalDate bd = b.getBookingDate();
+		if (bd != null && bd.isBefore(LocalDate.now())) return false;
+
+		return true;
+	}
+
+	private static LocalTime parseTime(String t) {
+		if (t == null) return null;
+		String s = t.trim();
+		if (s.isEmpty()) return null;
+		try {
+			return LocalTime.parse(s);
+		} catch (DateTimeParseException ignored) {
+			// Try HH:mm
+			try {
+				return LocalTime.parse(s.length() >= 5 ? s.substring(0, 5) : s);
+			} catch (DateTimeParseException ignored2) {
+				return null;
+			}
+		}
 	}
 }

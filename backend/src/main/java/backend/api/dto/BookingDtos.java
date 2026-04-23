@@ -9,8 +9,20 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 public class BookingDtos {
+
+	public record AuditEvent(
+			String type,
+			BookingStatus fromStatus,
+			BookingStatus toStatus,
+			String actorId,
+			String actorName,
+			String reason,
+			Instant at
+	) {
+	}
 
 	public record BookingResponse(
 			String id,
@@ -25,6 +37,7 @@ public class BookingDtos {
 			int attendees,
 			BookingStatus status,
 			String reviewReason,
+			List<AuditEvent> audit,
 			Instant createdAt,
 			Instant updatedAt
 	) {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeftIcon } from 'lucide-react'
+import { ArrowLeftIcon, HistoryIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { bookingsApi } from '../../services/bookingsApi'
 import { resourcesApi } from '../../services/resourcesApi'
@@ -50,6 +50,27 @@ export function BookingDetailsPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  const audit = useMemo(() => {
+    const rows = Array.isArray(booking?.audit) ? booking.audit : []
+    return [...rows].sort(
+      (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
+    )
+  }, [booking?.audit])
+
+  const formatAuditTime = (iso) => {
+    try {
+      return new Date(iso).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return String(iso || '')
+    }
+  }
 
   if (loading) {
     return (
@@ -358,6 +379,54 @@ export function BookingDetailsPage() {
           <p className="text-campus-gray-700 whitespace-pre-wrap">
             {booking.purpose || '—'}
           </p>
+        </div>
+
+        <div className="mt-6 border-t border-campus-gray-200 pt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <HistoryIcon className="w-5 h-5 text-campus-gray-400" />
+            <h3 className="font-semibold text-campus-gray-900">Audit history</h3>
+          </div>
+          {audit.length === 0 ? (
+            <p className="text-sm text-campus-gray-600">No history yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {audit.map((e, idx) => (
+                <div
+                  key={`${e.at || idx}-${e.type || 'event'}-${idx}`}
+                  className="flex items-start justify-between gap-4 bg-campus-gray-50 border border-campus-gray-200 rounded-xl p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm text-campus-gray-900 font-medium">
+                      {String(e.type || 'EVENT').replace(/_/g, ' ')}
+                      {e.toStatus ? (
+                        <span className="text-campus-gray-600 font-normal">
+                          {' '}
+                          → {String(e.toStatus)}
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="text-xs text-campus-gray-600 mt-0.5">
+                      {e.actorName || 'SYSTEM'}
+                      {e.fromStatus || e.toStatus ? (
+                        <span className="text-campus-gray-500">
+                          {' '}
+                          • {e.fromStatus || '—'} → {e.toStatus || '—'}
+                        </span>
+                      ) : null}
+                    </p>
+                    {e.reason && (
+                      <p className="text-sm text-campus-gray-700 mt-2 whitespace-pre-wrap">
+                        {e.reason}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-xs text-campus-gray-500 shrink-0">
+                    {formatAuditTime(e.at)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
