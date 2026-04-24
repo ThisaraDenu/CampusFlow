@@ -13,6 +13,7 @@ import { ResourcesPage } from './components/resources/ResourcesPage'
 import { ResourceDetailsPage } from './components/resources/ResourceDetailsPage'
 import { AddResourcePage } from './components/resources/AddResourcePage'
 import { EditResourcePage } from './components/resources/EditResourcePage'
+import { ResourceAvailabilityCalendarPage } from './components/resources/ResourceAvailabilityCalendarPage'
 import { MyBookingsPage } from './components/bookings/MyBookingsPage'
 import { BookedResourcesPage } from './components/bookings/BookedResourcesPage'
 import { CreateBookingPage } from './components/bookings/CreateBookingPage'
@@ -90,6 +91,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <ResourcesPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/resources/availability"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ResourceAvailabilityCalendarPage />
             </AppLayout>
           </ProtectedRoute>
         }
