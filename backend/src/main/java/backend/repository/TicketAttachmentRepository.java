@@ -11,6 +11,8 @@ public interface TicketAttachmentRepository extends MongoRepository<TicketAttach
 
 	List<TicketAttachment> findByTicketIdOrderByCreatedAtAsc(String ticketId);
 
+	void deleteByTicketId(String ticketId);
+
 	interface AttachmentMeta {
 		String getId();
 		String getFileName();

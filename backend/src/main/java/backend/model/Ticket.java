@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.List;
 
 @Document(collection = "tickets")
 @Getter
@@ -42,6 +43,18 @@ public class Ticket {
 	private boolean technicianViewed;
 
 	private String resolutionNotes;
+
+	/**
+	 * SLA due time based on priority (computed at creation).
+	 */
+	private Instant slaDueAt;
+
+	/**
+	 * Marks whether an overdue notification/escalation was already sent.
+	 */
+	private boolean slaOverdueNotified;
+
+	private List<TicketEscalationEvent> escalations;
 
 	private Instant createdAt;
 
