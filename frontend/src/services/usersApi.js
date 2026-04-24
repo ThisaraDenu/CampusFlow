@@ -5,6 +5,13 @@ export const usersApi = {
     return apiRequest('/api/admin/users')
   },
 
+  async createUser({ name, email, password, role }) {
+    return apiRequest('/api/admin/users', {
+      method: 'POST',
+      body: { name, email, password, role },
+    })
+  },
+
   async updateRole(userId, role) {
     return apiRequest(`/api/admin/users/${userId}/role`, {
       method: 'PATCH',
