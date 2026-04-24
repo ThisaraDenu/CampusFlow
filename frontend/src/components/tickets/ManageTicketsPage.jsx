@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchIcon, Trash2Icon, UserIcon, WrenchIcon } from 'lucide-react'
+import { AlertTriangleIcon, SearchIcon, Trash2Icon, UserIcon, WrenchIcon } from 'lucide-react'
 import { ticketsApi } from '../../services/ticketsApi'
 import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
@@ -93,6 +93,12 @@ export function ManageTicketsPage() {
       day: 'numeric',
       year: 'numeric',
     })
+
+  const isOverdue = (ticket) => {
+    if (!ticket?.slaDueAt) return false
+    if (['RESOLVED', 'CLOSED', 'REJECTED'].includes(ticket.status)) return false
+    return new Date(ticket.slaDueAt).getTime() < Date.now()
+  }
 
   const handleUpdateClick = (ticket, e) => {
     e.stopPropagation()
@@ -264,6 +270,12 @@ export function ManageTicketsPage() {
                   >
                     {ticket.priority}
                   </span>
+                  {isOverdue(ticket) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border bg-red-50 text-red-700 border-red-200">
+                      <AlertTriangleIcon className="w-3.5 h-3.5" />
+                      Overdue
+                    </span>
+                  )}
                   <StatusBadge status={ticket.status} size="sm" />
                   {ticket.assignedToName && (
                     <span className="text-sm text-campus-gray-600">
