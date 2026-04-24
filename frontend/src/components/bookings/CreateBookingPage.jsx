@@ -9,12 +9,15 @@ export function CreateBookingPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const initialResourceId = searchParams.get('resourceId') || ''
+  const initialDate = searchParams.get('date') || ''
+  const initialStartTime = searchParams.get('startTime') || ''
+  const initialEndTime = searchParams.get('endTime') || ''
 
   const [form, setForm] = useState({
     resourceId: initialResourceId,
-    date: '',
-    startTime: '',
-    endTime: '',
+    date: initialDate,
+    startTime: initialStartTime,
+    endTime: initialEndTime,
     purpose: '',
     attendees: 1,
   })
