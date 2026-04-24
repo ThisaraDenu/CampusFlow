@@ -8,6 +8,14 @@ import jakarta.validation.constraints.Size;
 
 public class AdminUserDtos {
 
+	public record CreateUserRequest(
+			@NotBlank @Size(max = 255) String name,
+			@NotBlank @Email @Size(max = 255) String email,
+			@NotBlank @Size(min = 6, max = 200) String password,
+			@NotNull UserRole role
+	) {
+	}
+
 	public record RoleUpdateRequest(@NotNull UserRole role) {
 	}
 

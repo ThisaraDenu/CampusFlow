@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { SearchIcon, UserIcon, Trash2Icon, PencilIcon } from 'lucide-react'
+import { SearchIcon, UserIcon, Trash2Icon, PencilIcon, PlusIcon } from 'lucide-react'
 import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
 import { EmptyState } from '../shared/EmptyState'
@@ -15,6 +15,12 @@ export function ManageUsersPage() {
   const [editEmail, setEditEmail] = useState('')
   const [editAvatarFile, setEditAvatarFile] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createEmail, setCreateEmail] = useState('')
+  const [createPassword, setCreatePassword] = useState('')
+  const [createRole, setCreateRole] = useState('USER')
+  const [creating, setCreating] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -134,6 +140,11 @@ export function ManageUsersPage() {
       <PageHeader
         title="Manage Users"
         subtitle="View and manage user accounts and roles."
+        action={{
+          label: 'Add User',
+          icon: <PlusIcon className="w-5 h-5" />,
+          onClick: () => setCreateOpen(true),
+        }}
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-campus-gray-200 p-4 mb-6">
@@ -337,6 +348,133 @@ export function ManageUsersPage() {
                 className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60"
               >
                 {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {createOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-lg bg-white rounded-xl shadow-lg border border-campus-gray-200">
+            <div className="p-5 border-b border-campus-gray-200">
+              <h3 className="text-lg font-semibold text-campus-gray-900">
+                Create user
+              </h3>
+              <p className="text-sm text-campus-gray-600">
+                Add a new account and assign a role.
+              </p>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Temporary password
+                </label>
+                <input
+                  type="password"
+                  value={createPassword}
+                  onChange={(e) => setCreatePassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+                <p className="text-xs text-campus-gray-500 mt-1">
+                  User can sign in with this password (min 6 chars).
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Role
+                </label>
+                <select
+                  value={createRole}
+                  onChange={(e) => setCreateRole(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                >
+                  <option value="USER">User</option>
+                  <option value="TECHNICIAN">Technician</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+                {!currentUser?.mainAdmin && createRole === 'ADMIN' ? (
+                  <p className="text-xs text-red-700 mt-1">
+                    Only the main admin can create admin accounts.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-campus-gray-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateOpen(false)
+                  setCreateName('')
+                  setCreateEmail('')
+                  setCreatePassword('')
+                  setCreateRole('USER')
+                  setCreating(false)
+                }}
+                disabled={creating}
+                className="px-4 py-2 rounded-lg border border-campus-gray-300 text-campus-gray-700 bg-white hover:bg-campus-gray-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={
+                  creating ||
+                  !createName.trim() ||
+                  !createEmail.trim() ||
+                  createPassword.length < 6 ||
+                  (!currentUser?.mainAdmin && createRole === 'ADMIN')
+                }
+                onClick={async () => {
+                  setCreating(true)
+                  try {
+                    await usersApi.createUser({
+                      name: createName,
+                      email: createEmail,
+                      password: createPassword,
+                      role: createRole,
+                    })
+                    await load()
+                    setCreateOpen(false)
+                    setCreateName('')
+                    setCreateEmail('')
+                    setCreatePassword('')
+                    setCreateRole('USER')
+                  } catch (e) {
+                    setCreating(false)
+                    alert(e?.message || 'Could not create user')
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60"
+              >
+                {creating ? 'Creating…' : 'Create user'}
               </button>
             </div>
           </div>

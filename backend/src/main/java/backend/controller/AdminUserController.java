@@ -35,6 +35,18 @@ public class AdminUserController {
 		return adminUserService.listAll();
 	}
 
+	@PostMapping
+	public UserResponse createUser(
+			@AuthenticationPrincipal SecurityUser principal,
+			@Valid @RequestBody AdminUserDtos.CreateUserRequest req) {
+		return adminUserService.createUser(
+				principal.getUsername(),
+				req.name(),
+				req.email(),
+				req.password(),
+				req.role());
+	}
+
 	@PatchMapping("/{id}/role")
 	public UserResponse updateRole(
 			@AuthenticationPrincipal SecurityUser principal,
