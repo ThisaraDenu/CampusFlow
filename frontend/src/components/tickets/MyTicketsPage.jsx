@@ -31,10 +31,31 @@ export function MyTicketsPage() {
     load()
   }, [load])
 
+  // Keep statuses fresh while user is on this page (technician/admin may update tickets).
+  useEffect(() => {
+    if (!user?.id) return
+    const t = setInterval(() => {
+      load()
+    }, 8000)
+    return () => clearInterval(t)
+  }, [load, user?.id])
+
   const userTickets = tickets.filter((t) => t.userId === user?.id)
 
+  const displayStatus = (ticket) => {
+    // UX: hide OPEN from the reporter until the assigned technician has opened the ticket.
+    if (ticket?.status === 'OPEN') {
+      // If not assigned yet, it is still pending from the reporter POV.
+      if (!ticket?.assignedTo) return 'PENDING'
+      // Assigned but technician hasn't opened it yet.
+      if (ticket?.technicianViewed === false) return 'PENDING'
+      return 'OPEN'
+    }
+    return ticket?.status
+  }
+
   const filteredTickets = userTickets.filter((ticket) => {
-    const matchesTab = activeTab === 'ALL' || ticket.status === activeTab
+    const matchesTab = activeTab === 'ALL' || displayStatus(ticket) === activeTab
     const matchesSearch =
       ticket.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (ticket.resourceName?.toLowerCase() || '').includes(
@@ -76,6 +97,7 @@ export function MyTicketsPage() {
 
   const tabs = [
     { id: 'ALL', label: 'All Tickets' },
+    { id: 'PENDING', label: 'Pending' },
     { id: 'OPEN', label: 'Open' },
     { id: 'IN_PROGRESS', label: 'In Progress' },
     { id: 'RESOLVED', label: 'Resolved' },
@@ -88,11 +110,15 @@ export function MyTicketsPage() {
       <PageHeader
         title="My Tickets"
         subtitle="Track your reported incidents and maintenance requests."
-        action={{
-          label: 'Report Incident',
-          icon: <PlusIcon className="w-5 h-5" />,
-          onClick: () => navigate('/tickets/create'),
-        }}
+        action={
+          user?.role !== 'TECHNICIAN'
+            ? {
+                label: 'Report Incident',
+                icon: <PlusIcon className="w-5 h-5" />,
+                onClick: () => navigate('/tickets/create'),
+              }
+            : undefined
+        }
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-campus-gray-200 overflow-hidden mb-6">
@@ -151,7 +177,7 @@ export function MyTicketsPage() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <StatusBadge status={ticket.status} size="sm" />
+                    <StatusBadge status={displayStatus(ticket)} size="sm" />
                     <span
                       className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getPriorityColor(
                         ticket.priority,

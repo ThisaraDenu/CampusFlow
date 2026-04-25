@@ -1,13 +1,26 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { SearchIcon, UserIcon } from 'lucide-react'
+import { SearchIcon, UserIcon, Trash2Icon, PencilIcon, PlusIcon } from 'lucide-react'
 import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
 import { EmptyState } from '../shared/EmptyState'
+import { useAuth } from '../../context/AuthContext'
 
 export function ManageUsersPage() {
+  const { user: currentUser } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [editingUser, setEditingUser] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editAvatarFile, setEditAvatarFile] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createEmail, setCreateEmail] = useState('')
+  const [createPassword, setCreatePassword] = useState('')
+  const [createRole, setCreateRole] = useState('USER')
+  const [creating, setCreating] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -58,11 +71,80 @@ export function ManageUsersPage() {
     }
   }
 
+  const canDeleteUser = (u) => {
+    if (!currentUser) return false
+    if (u.id === currentUser.id) return false
+    if (u.role !== 'ADMIN') return true
+    return !!currentUser.mainAdmin && !u.mainAdmin
+  }
+
+  const canEditRole = (u, roleValue) => {
+    if (!currentUser) return false
+    if (u.mainAdmin && roleValue !== 'ADMIN') return false
+    if ((u.role === 'ADMIN' || roleValue === 'ADMIN') && !currentUser.mainAdmin) {
+      return false
+    }
+    return true
+  }
+
+  const handleDelete = async (u) => {
+    const ok = window.confirm(`Delete ${u.name} (${u.role})? This cannot be undone.`)
+    if (!ok) return
+    try {
+      await usersApi.deleteUser(u.id)
+      await load()
+    } catch (e) {
+      alert(e?.message || 'Could not delete user')
+    }
+  }
+
+  const openEdit = (u) => {
+    setEditingUser(u)
+    setEditName(u.name || '')
+    setEditEmail(u.email || '')
+    setEditAvatarFile(null)
+  }
+
+  const closeEdit = () => {
+    setEditingUser(null)
+    setEditName('')
+    setEditEmail('')
+    setEditAvatarFile(null)
+    setSaving(false)
+  }
+
+  const canEditProfile = (u) => {
+    if (!currentUser) return false
+    if (u.role !== 'ADMIN') return true
+    return !!currentUser.mainAdmin
+  }
+
+  const handleSaveProfile = async () => {
+    if (!editingUser) return
+    setSaving(true)
+    try {
+      await usersApi.updateProfile(editingUser.id, { name: editName, email: editEmail })
+      if (editAvatarFile) {
+        await usersApi.uploadAvatar(editingUser.id, editAvatarFile)
+      }
+      await load()
+      closeEdit()
+    } catch (e) {
+      setSaving(false)
+      alert(e?.message || 'Could not update profile')
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       <PageHeader
         title="Manage Users"
         subtitle="View and manage user accounts and roles."
+        action={{
+          label: 'Add User',
+          icon: <PlusIcon className="w-5 h-5" />,
+          onClick: () => setCreateOpen(true),
+        }}
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-campus-gray-200 p-4 mb-6">
@@ -125,6 +207,11 @@ export function ManageUsersPage() {
                         <span className="font-medium text-campus-gray-900">
                           {u.name}
                         </span>
+                        {u.mainAdmin ? (
+                          <span className="ml-2 px-2 py-0.5 text-xs rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                            Main admin
+                          </span>
+                        ) : null}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-campus-gray-600">
@@ -143,15 +230,51 @@ export function ManageUsersPage() {
                       {formatDate(u.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                        className="px-3 py-1 border border-campus-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                      >
-                        <option value="USER">User</option>
-                        <option value="ADMIN">Admin</option>
-                        <option value="TECHNICIAN">Technician</option>
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(u)}
+                          disabled={!canEditProfile(u)}
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm border ${
+                            canEditProfile(u)
+                              ? 'border-campus-gray-200 text-campus-gray-700 bg-white hover:bg-campus-gray-50'
+                              : 'border-campus-gray-200 text-campus-gray-400 bg-campus-gray-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <PencilIcon className="w-4 h-4" />
+                          Edit
+                        </button>
+
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          className="px-3 py-1 border border-campus-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                        >
+                          <option value="USER" disabled={!canEditRole(u, 'USER')}>
+                            User
+                          </option>
+                          <option value="ADMIN" disabled={!canEditRole(u, 'ADMIN')}>
+                            Admin
+                          </option>
+                          <option value="TECHNICIAN" disabled={!canEditRole(u, 'TECHNICIAN')}>
+                            Technician
+                          </option>
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(u)}
+                          disabled={!canDeleteUser(u)}
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm border ${
+                            canDeleteUser(u)
+                              ? 'border-red-200 text-red-700 bg-red-50 hover:bg-red-100'
+                              : 'border-campus-gray-200 text-campus-gray-400 bg-campus-gray-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <Trash2Icon className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -160,6 +283,203 @@ export function ManageUsersPage() {
           </div>
         </div>
       )}
+
+      {editingUser ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-lg bg-white rounded-xl shadow-lg border border-campus-gray-200">
+            <div className="p-5 border-b border-campus-gray-200">
+              <h3 className="text-lg font-semibold text-campus-gray-900">Edit profile</h3>
+              <p className="text-sm text-campus-gray-600">
+                {editingUser.name} ({editingUser.role})
+              </p>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Avatar (optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setEditAvatarFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-campus-gray-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeEdit}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg border border-campus-gray-300 text-campus-gray-700 bg-white hover:bg-campus-gray-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60"
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {createOpen ? (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="w-full max-w-lg bg-white rounded-xl shadow-lg border border-campus-gray-200">
+            <div className="p-5 border-b border-campus-gray-200">
+              <h3 className="text-lg font-semibold text-campus-gray-900">
+                Create user
+              </h3>
+              <p className="text-sm text-campus-gray-600">
+                Add a new account and assign a role.
+              </p>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Temporary password
+                </label>
+                <input
+                  type="password"
+                  value={createPassword}
+                  onChange={(e) => setCreatePassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                />
+                <p className="text-xs text-campus-gray-500 mt-1">
+                  User can sign in with this password (min 6 chars).
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-campus-gray-700 mb-1">
+                  Role
+                </label>
+                <select
+                  value={createRole}
+                  onChange={(e) => setCreateRole(e.target.value)}
+                  className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                >
+                  <option value="USER">User</option>
+                  <option value="TECHNICIAN">Technician</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+                {!currentUser?.mainAdmin && createRole === 'ADMIN' ? (
+                  <p className="text-xs text-red-700 mt-1">
+                    Only the main admin can create admin accounts.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="p-5 border-t border-campus-gray-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateOpen(false)
+                  setCreateName('')
+                  setCreateEmail('')
+                  setCreatePassword('')
+                  setCreateRole('USER')
+                  setCreating(false)
+                }}
+                disabled={creating}
+                className="px-4 py-2 rounded-lg border border-campus-gray-300 text-campus-gray-700 bg-white hover:bg-campus-gray-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={
+                  creating ||
+                  !createName.trim() ||
+                  !createEmail.trim() ||
+                  createPassword.length < 6 ||
+                  (!currentUser?.mainAdmin && createRole === 'ADMIN')
+                }
+                onClick={async () => {
+                  setCreating(true)
+                  try {
+                    await usersApi.createUser({
+                      name: createName,
+                      email: createEmail,
+                      password: createPassword,
+                      role: createRole,
+                    })
+                    await load()
+                    setCreateOpen(false)
+                    setCreateName('')
+                    setCreateEmail('')
+                    setCreatePassword('')
+                    setCreateRole('USER')
+                  } catch (e) {
+                    setCreating(false)
+                    alert(e?.message || 'Could not create user')
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60"
+              >
+                {creating ? 'Creating…' : 'Create user'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

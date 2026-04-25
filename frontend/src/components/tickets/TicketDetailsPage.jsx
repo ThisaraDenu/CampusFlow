@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, Fragment } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeftIcon, CalendarIcon, ClockIcon } from 'lucide-react'
+import { AlertTriangleIcon, ArrowLeftIcon, CalendarIcon, ClockIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { ticketsApi } from '../../services/ticketsApi'
 import { usersApi } from '../../services/usersApi'
@@ -10,6 +10,7 @@ import { ErrorState } from '../shared/ErrorState'
 import { TicketAttachmentGallery } from './TicketAttachmentGallery'
 import { TicketCommentsSection } from './TicketCommentsSection'
 import { UpdateTicketStatusModal } from './UpdateTicketStatusModal'
+import { EscalateTicketModal } from './EscalateTicketModal'
 
 export function TicketDetailsPage() {
   const { id } = useParams()
@@ -21,6 +22,7 @@ export function TicketDetailsPage() {
   const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
+  const [escalateOpen, setEscalateOpen] = useState(false)
 
   const loadTicket = useCallback(async () => {
     if (!id) return
@@ -101,7 +103,11 @@ export function TicketDetailsPage() {
           loadError ||
           "The ticket you're looking for doesn't exist or has been removed."
         }
-        onRetry={() => navigate('/tickets')}
+        onRetry={() => {
+          if (user?.role === 'ADMIN') return navigate('/admin/tickets')
+          if (user?.role === 'TECHNICIAN') return navigate('/technician/tickets')
+          return navigate('/tickets')
+        }}
       />
     )
   }
@@ -109,6 +115,14 @@ export function TicketDetailsPage() {
   const isAdmin = user?.role === 'ADMIN'
   const isTechnician =
     user?.role === 'TECHNICIAN' && ticket.assignedTo === user?.id
+  const isReporter = ticket.userId === user?.id
+
+  const displayStatus =
+    isReporter &&
+    ticket.status === 'OPEN' &&
+    (!ticket.assignedTo || ticket.technicianViewed === false)
+      ? 'PENDING'
+      : ticket.status
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -145,6 +159,39 @@ export function TicketDetailsPage() {
     await loadTicket()
   }
 
+  const handleReject = async () => {
+    const ok = window.confirm(
+      'Reject this ticket? It will be visible to the admin and the user.',
+    )
+    if (!ok) return
+    const reason =
+      window.prompt('Reason for rejection (optional):', '')?.trim() || ''
+    const body = { status: 'REJECTED' }
+    if (reason) body.resolutionNotes = reason
+    await ticketsApi.update(ticket.id, body)
+    await loadTicket()
+    navigate('/technician/tickets')
+  }
+
+  const isOverdue =
+    ticket.slaDueAt &&
+    !['REJECTED', 'RESOLVED', 'CLOSED'].includes(ticket.status) &&
+    new Date(ticket.slaDueAt).getTime() < Date.now()
+
+  const formatShort = (dateString) =>
+    new Date(dateString).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+
+  const handleEscalate = async ({ note, reassignTo }) => {
+    await ticketsApi.escalate(ticket.id, { note, reassignTo })
+    await loadTicket()
+  }
+
   const statusSteps = [
     { status: 'OPEN', label: 'Open' },
     { status: 'IN_PROGRESS', label: 'In Progress' },
@@ -152,18 +199,26 @@ export function TicketDetailsPage() {
     { status: 'CLOSED', label: 'Closed' },
   ]
   const currentStepIndex =
-    ticket.status === 'REJECTED'
+    displayStatus === 'REJECTED'
       ? -1
-      : statusSteps.findIndex((s) => s.status === ticket.status)
+      : statusSteps.findIndex((s) => s.status === displayStatus)
+
+  const backPath = isAdmin
+    ? '/admin/tickets'
+    : user?.role === 'TECHNICIAN'
+      ? '/technician/tickets'
+      : '/tickets'
+
+  const backLabel = isAdmin ? 'Back to Manage Tickets' : 'Back to Tickets'
 
   return (
     <div className="max-w-5xl mx-auto">
       <button
-        onClick={() => navigate('/tickets')}
+        onClick={() => navigate(backPath)}
         className="flex items-center gap-2 text-campus-gray-600 hover:text-campus-gray-900 mb-4 transition-colors"
       >
         <ArrowLeftIcon className="w-4 h-4" />
-        Back to Tickets
+        {backLabel}
       </button>
 
       <div className="bg-white rounded-xl shadow-sm border border-campus-gray-200 p-6 mb-6">
@@ -173,7 +228,7 @@ export function TicketDetailsPage() {
               Ticket #{ticket.id}
             </h1>
             <div className="flex items-center gap-3">
-              <StatusBadge status={ticket.status} />
+              <StatusBadge status={displayStatus} />
               <span
                 className={`px-3 py-1 text-sm font-medium rounded-full border ${getPriorityColor(
                   ticket.priority,
@@ -181,17 +236,56 @@ export function TicketDetailsPage() {
               >
                 {ticket.priority} Priority
               </span>
+              {isOverdue && (
+                <span className="inline-flex items-center gap-2 px-3 py-1 text-sm font-medium rounded-full border bg-red-50 text-red-700 border-red-200">
+                  <AlertTriangleIcon className="w-4 h-4" />
+                  Overdue
+                </span>
+              )}
             </div>
           </div>
-          {(isAdmin || isTechnician) && (
-            <button
-              onClick={() => setUpdateModalOpen(true)}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-            >
-              Update Status
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {(isAdmin || isTechnician) && (
+              <button
+                onClick={() => setUpdateModalOpen(true)}
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+              >
+                Update Status
+              </button>
+            )}
+            {(isAdmin || isTechnician) &&
+              !['REJECTED', 'RESOLVED', 'CLOSED'].includes(ticket.status) && (
+                <button
+                  onClick={() => setEscalateOpen(true)}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  Escalate
+                </button>
+              )}
+            {isTechnician &&
+              !['REJECTED', 'RESOLVED', 'CLOSED'].includes(ticket.status) && (
+                <button
+                  onClick={handleReject}
+                  className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  Reject
+                </button>
+              )}
+          </div>
         </div>
+
+        {ticket.slaDueAt && (
+          <div
+            className={`mb-6 rounded-lg border px-3 py-2 text-sm ${
+              isOverdue
+                ? 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-teal-50 border-teal-200 text-teal-800'
+            }`}
+          >
+            <span className="font-medium">SLA due:</span>{' '}
+            {formatShort(ticket.slaDueAt)}
+          </div>
+        )}
 
         {ticket.status === 'REJECTED' && (
           <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4">
@@ -311,12 +405,62 @@ export function TicketDetailsPage() {
         </div>
       </div>
 
+      {ticket.escalations?.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-campus-gray-200 p-6 mb-6">
+          <h3 className="text-lg font-semibold text-campus-gray-900 mb-4">
+            Escalation notes
+          </h3>
+          <div className="space-y-3">
+            {[...ticket.escalations]
+              .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+              .map((e, idx) => (
+                <div
+                  key={`${e.at || idx}-${idx}`}
+                  className="bg-campus-gray-50 border border-campus-gray-200 rounded-lg p-3"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-campus-gray-900">
+                        {e.actorName || 'SYSTEM'}
+                      </p>
+                      {e.note && (
+                        <p className="text-sm text-campus-gray-700 mt-1 whitespace-pre-wrap">
+                          {e.note}
+                        </p>
+                      )}
+                      {(e.previousAssigneeId || e.newAssigneeId) && (
+                        <p className="text-xs text-campus-gray-500 mt-2">
+                          Assignee: {e.previousAssigneeId || '—'} →{' '}
+                          {e.newAssigneeId || '—'}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-xs text-campus-gray-500 shrink-0">
+                      {formatShort(e.at)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       <UpdateTicketStatusModal
         isOpen={updateModalOpen}
         onClose={() => setUpdateModalOpen(false)}
         ticket={ticket}
         onUpdate={handleUpdateStatus}
+        technicians={isAdmin ? technicians : []}
+        context={isAdmin ? 'admin' : 'technician'}
+      />
+
+      <EscalateTicketModal
+        isOpen={escalateOpen}
+        onClose={() => setEscalateOpen(false)}
+        onConfirm={handleEscalate}
+        ticket={ticket}
         technicians={technicians}
+        allowReassign={isAdmin}
       />
     </div>
   )

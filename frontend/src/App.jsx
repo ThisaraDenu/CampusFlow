@@ -13,7 +13,9 @@ import { ResourcesPage } from './components/resources/ResourcesPage'
 import { ResourceDetailsPage } from './components/resources/ResourceDetailsPage'
 import { AddResourcePage } from './components/resources/AddResourcePage'
 import { EditResourcePage } from './components/resources/EditResourcePage'
+import { ResourceAvailabilityCalendarPage } from './components/resources/ResourceAvailabilityCalendarPage'
 import { MyBookingsPage } from './components/bookings/MyBookingsPage'
+import { BookedResourcesPage } from './components/bookings/BookedResourcesPage'
 import { CreateBookingPage } from './components/bookings/CreateBookingPage'
 import { BookingDetailsPage } from './components/bookings/BookingDetailsPage'
 import { ManageBookingsPage } from './components/bookings/ManageBookingsPage'
@@ -24,6 +26,7 @@ import { ManageTicketsPage } from './components/tickets/ManageTicketsPage'
 import { AssignedTicketsPage } from './components/tickets/AssignedTicketsPage'
 import { NotificationsPage } from './components/notifications/NotificationsPage'
 import { AdminDashboardPage } from './components/admin/AdminDashboardPage'
+import { AdminAnalyticsPage } from './components/admin/AdminAnalyticsPage'
 import { ManageUsersPage } from './components/admin/ManageUsersPage'
 import { Home } from './components/Home/Home'
 
@@ -93,6 +96,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/resources/availability"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ResourceAvailabilityCalendarPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/resources/add"
         element={
           <ProtectedRoute>
@@ -133,6 +146,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AppLayout>
               <MyBookingsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/bookings/booked"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <BookedResourcesPage />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -230,6 +253,18 @@ function AppRoutes() {
             <RoleProtectedRoute allow={['ADMIN']}>
               <AppLayout>
                 <ManageBookingsPage />
+              </AppLayout>
+            </RoleProtectedRoute>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <ProtectedRoute>
+            <RoleProtectedRoute allow={['ADMIN']}>
+              <AppLayout>
+                <AdminAnalyticsPage />
               </AppLayout>
             </RoleProtectedRoute>
           </ProtectedRoute>

@@ -8,4 +8,6 @@ import java.util.List;
 public interface TicketCommentRepository extends MongoRepository<TicketComment, String> {
 
 	List<TicketComment> findByTicketIdOrderByCreatedAtAsc(String ticketId);
+
+	void deleteByTicketId(String ticketId);
 }

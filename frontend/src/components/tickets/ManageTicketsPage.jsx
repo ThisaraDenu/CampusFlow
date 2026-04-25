@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchIcon, UserIcon, WrenchIcon } from 'lucide-react'
+import { AlertTriangleIcon, SearchIcon, Trash2Icon, UserIcon, WrenchIcon } from 'lucide-react'
 import { ticketsApi } from '../../services/ticketsApi'
 import { usersApi } from '../../services/usersApi'
 import { PageHeader } from '../shared/PageHeader'
@@ -14,6 +14,7 @@ export function ManageTicketsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('ALL')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
+  const [unassignedOnly, setUnassignedOnly] = useState(false)
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
   const [selectedTicket, setSelectedTicket] = useState(null)
   const [tickets, setTickets] = useState([])
@@ -47,13 +48,20 @@ export function ManageTicketsPage() {
       priorityFilter === 'ALL' || ticket.priority === priorityFilter
     const matchesCategory =
       categoryFilter === 'ALL' || ticket.category === categoryFilter
+    const matchesUnassigned = !unassignedOnly || !ticket.assignedTo
     const matchesSearch =
       ticket.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (ticket.resourceName?.toLowerCase() || '').includes(
         searchQuery.toLowerCase(),
       )
-    return matchesTab && matchesPriority && matchesCategory && matchesSearch
+    return (
+      matchesTab &&
+      matchesPriority &&
+      matchesCategory &&
+      matchesUnassigned &&
+      matchesSearch
+    )
   })
 
   const priorityWeight = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }
@@ -86,6 +94,12 @@ export function ManageTicketsPage() {
       year: 'numeric',
     })
 
+  const isOverdue = (ticket) => {
+    if (!ticket?.slaDueAt) return false
+    if (['RESOLVED', 'CLOSED', 'REJECTED'].includes(ticket.status)) return false
+    return new Date(ticket.slaDueAt).getTime() < Date.now()
+  }
+
   const handleUpdateClick = (ticket, e) => {
     e.stopPropagation()
     setSelectedTicket(ticket)
@@ -98,6 +112,16 @@ export function ManageTicketsPage() {
     if (resolutionNotes) body.resolutionNotes = resolutionNotes
     if (assignedTo !== undefined) body.assignedTo = assignedTo || null
     await ticketsApi.update(selectedTicket.id, body)
+    await load()
+  }
+
+  const handleDeleteClick = async (ticket, e) => {
+    e.stopPropagation()
+    const ok = window.confirm(
+      `Delete ticket #${ticket.id}?\n\nThis will permanently remove the ticket, its comments, and attachments.`,
+    )
+    if (!ok) return
+    await ticketsApi.delete(ticket.id)
     await load()
   }
 
@@ -188,6 +212,16 @@ export function ManageTicketsPage() {
               <option value="SAFETY">Safety</option>
               <option value="OTHER">Other</option>
             </select>
+
+            <label className="flex items-center gap-2 px-3 py-2 border border-campus-gray-300 rounded-lg bg-white text-sm text-campus-gray-700">
+              <input
+                type="checkbox"
+                checked={unassignedOnly}
+                onChange={(e) => setUnassignedOnly(e.target.checked)}
+                className="accent-teal-600"
+              />
+              Unassigned only
+            </label>
           </div>
         </div>
       </div>
@@ -236,6 +270,12 @@ export function ManageTicketsPage() {
                   >
                     {ticket.priority}
                   </span>
+                  {isOverdue(ticket) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border bg-red-50 text-red-700 border-red-200">
+                      <AlertTriangleIcon className="w-3.5 h-3.5" />
+                      Overdue
+                    </span>
+                  )}
                   <StatusBadge status={ticket.status} size="sm" />
                   {ticket.assignedToName && (
                     <span className="text-sm text-campus-gray-600">
@@ -246,13 +286,25 @@ export function ManageTicketsPage() {
                     {formatDate(ticket.createdAt)}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => handleUpdateClick(ticket, e)}
-                  className="px-3 py-1 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors shrink-0"
-                >
-                  Update
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => handleUpdateClick(ticket, e)}
+                    className="px-3 py-1 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors"
+                  >
+                    Update
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteClick(ticket, e)}
+                    className="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors inline-flex items-center gap-1"
+                    aria-label={`Delete ticket ${ticket.id}`}
+                    title="Delete ticket"
+                  >
+                    <Trash2Icon className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}

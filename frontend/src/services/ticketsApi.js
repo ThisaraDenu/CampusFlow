@@ -18,6 +18,17 @@ export const ticketsApi = {
     return apiRequest(`/api/tickets/${id}`, { method: 'PATCH', body: patch })
   },
 
+  async delete(id) {
+    return apiRequest(`/api/tickets/${id}`, { method: 'DELETE' })
+  },
+
+  async escalate(id, { note, reassignTo } = {}) {
+    return apiRequest(`/api/tickets/${id}/escalate`, {
+      method: 'POST',
+      body: { note: note || null, reassignTo: reassignTo || null },
+    })
+  },
+
   async listComments(ticketId) {
     return apiRequest(`/api/tickets/${ticketId}/comments`)
   },

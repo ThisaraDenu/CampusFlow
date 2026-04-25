@@ -9,6 +9,7 @@ export function UpdateTicketStatusModal({
   ticket,
   onUpdate,
   technicians = [],
+  context = 'admin', // 'admin' | 'technician'
 }) {
   const [newStatus, setNewStatus] = useState(ticket?.status || 'OPEN')
   const [resolutionNotes, setResolutionNotes] = useState('')
@@ -24,6 +25,7 @@ export function UpdateTicketStatusModal({
 
   const getValidStatuses = () => {
     const status = ticket?.status
+    const base = (() => {
     switch (status) {
       case 'OPEN':
         return ['OPEN', 'IN_PROGRESS', 'REJECTED']
@@ -38,6 +40,13 @@ export function UpdateTicketStatusModal({
       default:
         return status ? [status] : ['OPEN']
     }
+    })()
+
+    if (context === 'technician') {
+      // Technician flow uses a dedicated Reject action.
+      return base.filter((s) => s !== 'REJECTED')
+    }
+    return base
   }
 
   const handleSubmit = () => {
@@ -45,7 +54,11 @@ export function UpdateTicketStatusModal({
       alert('Resolution notes are required when resolving a ticket')
       return
     }
-    onUpdate(newStatus, resolutionNotes || undefined, assignedTo || undefined)
+    onUpdate(
+      newStatus,
+      resolutionNotes || undefined,
+      context === 'admin' ? assignedTo || undefined : undefined,
+    )
     onClose()
   }
 
@@ -109,23 +122,25 @@ export function UpdateTicketStatusModal({
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-campus-gray-700 mb-2">
-                    Assign Technician
-                  </label>
-                  <select
-                    value={assignedTo}
-                    onChange={(e) => setAssignedTo(e.target.value)}
-                    className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                  >
-                    <option value="">Unassigned</option>
-                    {technicians.map((tech) => (
-                      <option key={tech.id} value={tech.id}>
-                        {tech.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {context === 'admin' && (
+                  <div>
+                    <label className="block text-sm font-medium text-campus-gray-700 mb-2">
+                      Assign Technician
+                    </label>
+                    <select
+                      value={assignedTo}
+                      onChange={(e) => setAssignedTo(e.target.value)}
+                      className="w-full px-3 py-2 border border-campus-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    >
+                      <option value="">Unassigned</option>
+                      {technicians.map((tech) => (
+                        <option key={tech.id} value={tech.id}>
+                          {tech.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {(newStatus === 'RESOLVED' || newStatus === 'CLOSED') && (
                   <div>

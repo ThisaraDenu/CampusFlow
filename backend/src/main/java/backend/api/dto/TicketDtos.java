@@ -12,6 +12,16 @@ import java.util.List;
 
 public class TicketDtos {
 
+	public record EscalationEvent(
+			String note,
+			String actorId,
+			String actorName,
+			String previousAssigneeId,
+			String newAssigneeId,
+			Instant at
+	) {
+	}
+
 	public record AttachmentDto(
 			String id,
 			String fileName,
@@ -31,9 +41,13 @@ public class TicketDtos {
 			TicketPriority priority,
 			String description,
 			TicketStatus status,
+			boolean technicianViewed,
 			String assignedTo,
 			String assignedToName,
 			String resolutionNotes,
+			Instant slaDueAt,
+			boolean slaOverdueNotified,
+			List<EscalationEvent> escalations,
 			List<AttachmentDto> attachments,
 			Instant createdAt,
 			Instant updatedAt
@@ -55,9 +69,21 @@ public class TicketDtos {
 					t.getPriority(),
 					t.getDescription(),
 					t.getStatus(),
+					t.isTechnicianViewed(),
 					assignedToId,
 					assignedToName,
 					t.getResolutionNotes(),
+					t.getSlaDueAt(),
+					t.isSlaOverdueNotified(),
+					(t.getEscalations() == null ? List.<backend.model.TicketEscalationEvent>of() : t.getEscalations()).stream()
+							.map(e -> new EscalationEvent(
+									e.getNote(),
+									e.getActorId(),
+									e.getActorName(),
+									e.getPreviousAssigneeId(),
+									e.getNewAssigneeId(),
+									e.getAt()))
+							.toList(),
 					attachments,
 					t.getCreatedAt(),
 					t.getUpdatedAt());
@@ -76,6 +102,12 @@ public class TicketDtos {
 			@NotNull TicketStatus status,
 			String resolutionNotes,
 			String assignedTo
+	) {
+	}
+
+	public record EscalateRequest(
+			String note,
+			String reassignTo
 	) {
 	}
 

@@ -22,24 +22,24 @@ const stagger = {
 
 const HERO_SLIDES = [
   {
-    src: 'https://images.unsplash.com/photo-1562774053-701939374585?w=1920&q=85&auto=format&fit=crop',
-    alt: 'University campus with historic buildings and green lawns',
+    src: '/landing/sliit-campus.png',
+    alt: 'SLIIT Malabe campus buildings and grounds',
   },
   {
-    src: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1920&q=85&auto=format&fit=crop',
-    alt: 'Students collaborating at a table on campus',
+    src: '/landing/sliit-library.png',
+    alt: 'Open study area with tables and seating',
   },
   {
-    src: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1920&q=85&auto=format&fit=crop',
-    alt: 'School hallway with lockers and natural light',
+    src: '/landing/sliit-library-reading.png',
+    alt: 'Student reading in a library',
   },
   {
-    src: 'https://images.unsplash.com/photo-1564981797816-1043664bf78d?w=1920&q=85&auto=format&fit=crop',
-    alt: 'Library shelves and quiet study space',
+    src: '/landing/sliit-computer-lab.png',
+    alt: 'Students working in a computer lab',
   },
   {
-    src: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=85&auto=format&fit=crop',
-    alt: 'Modern campus workspace with natural light',
+    src: '/landing/sliit-convocation.png',
+    alt: 'Graduation convocation ceremony',
   },
 ]
 
@@ -47,11 +47,11 @@ const HERO_INTERVAL_MS = 6000
 
 const IMAGES = {
   bookings:
-    'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800&q=80&auto=format&fit=crop',
+    '/landing/facility-asset-bookings.png',
   tickets:
-    'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=800&q=80&auto=format&fit=crop',
+    '/landing/incidents-maintenance.png',
   notifications:
-    'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80&auto=format&fit=crop',
+    '/landing/timely-notifications.png',
 }
 
 const features = [
@@ -355,9 +355,6 @@ export function Home() {
                 Sign in
                 <ArrowRightIcon className="h-5 w-5" aria-hidden />
               </button>
-              <p className="mt-6 text-sm text-campus-gray-300">
-                Demo application—no real authentication required.
-              </p>
             </motion.div>
           </div>
         </section>
@@ -365,7 +362,7 @@ export function Home() {
 
       <footer className="border-t border-campus-gray-200 bg-white py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-center text-sm text-campus-gray-500 sm:flex-row sm:text-left sm:px-6">
-          <p>© {new Date().getFullYear()} CampusFlow. Demo purposes only.</p>
+          <p>© {new Date().getFullYear()} CampusFlow. All rights reserved.</p>
           <a
             href="#features"
             className="font-medium text-teal-700 outline-none hover:text-teal-800 focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 rounded"
