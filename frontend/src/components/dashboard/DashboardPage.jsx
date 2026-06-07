@@ -54,7 +54,7 @@ export function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [user?.id])
+  }, [user?.id, user?.role])
 
   useEffect(() => {
     load()

@@ -29,7 +29,7 @@ export function ProfilePage() {
     setName(user?.name || '')
     setEmail(user?.email || '')
     setPreviewAvatar('')
-  }, [user?.id])
+  }, [user?.id, user?.name, user?.email])
 
   const avatarSrc = useMemo(() => {
     return (
