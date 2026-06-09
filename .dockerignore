@@ -1,0 +1,14 @@
+.git/
+.gitignore
+.DS_Store
+node_modules/
+frontend/build/
+frontend/node_modules/
+backend/target/
+.env
+.env.local
+*.log
+*.class
+.vscode/
+.idea/
+*.iml
