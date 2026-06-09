@@ -3,12 +3,10 @@ FROM maven:3.9-eclipse-temurin-25 AS builder
 
 WORKDIR /app
 
-# Copy pom.xml and download dependencies
-COPY backend/pom.xml .
-RUN mvn dependency:go-offline
+# Copy entire backend folder
+COPY backend/ .
 
-# Copy source code and build
-COPY backend/src ./src
+# Download dependencies and build
 RUN mvn clean package -DskipTests
 
 # Runtime stage
